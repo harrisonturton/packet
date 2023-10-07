@@ -3,6 +3,11 @@ use crate::{offset_read, Error};
 /// An MAC packet as defined by the IEEE Standard for Ethernet (IEEE Std
 /// 802.3-2022). All values are returned in network byte order.
 ///
+/// This struct wraps a byte array directly. Nothing is parsed until the field
+/// accessor methods (e.g. [`mac_dest`]) are called. The header values are passed
+/// around as copies since they're so small, but the client data (the payload) is
+/// returned as a slice into the frame byte array.
+///
 /// This implementation doesn't offer methods for extracting the preamble and
 /// start frame delimiter (SFD) because those are layer 1 components. They're
 /// typically stripped by the NIC anyway, so they're not usually available.
@@ -18,8 +23,13 @@ impl<'a> Frame<'a> {
     /// Create a new Ethernet frame.
     ///
     /// # Errors
+    ///
     /// Fails when the byte slice is smaller than the minimum
     /// [`MIN_ETHERNET_FRAME`] size, but does not other validation.
+    ///
+    /// The field accessor methods on [`Frame`] index directly into the byte
+    /// array (an unsafe operation) so this length precondition needs to be
+    /// enforced to ensure safety at runtime.
     #[inline]
     pub fn new(bytes: &'a [u8]) -> Result<Frame, Error> {
         if bytes.len() < MIN_FRAME_LEN {
@@ -50,8 +60,7 @@ impl<'a> Frame<'a> {
     #[inline]
     #[must_use]
     pub fn length_type(&self) -> LengthType {
-        let lentype = unsafe { offset_read::<[u8; 2]>(self.bytes, 12) };
-        match u16::from_be_bytes(lentype) {
+        match u16::from_be_bytes(unsafe { offset_read(self.bytes, 12) }) {
             ETHERTYPE_IPV4 => LengthType::Type(EtherType::Ipv4),
             ETHERTYPE_IPV6 => LengthType::Type(EtherType::Ipv6),
             len if len <= MAX_LENTYPE_LEN => LengthType::Length(len),
