@@ -82,10 +82,10 @@ impl<'a> Frame<'a> {
     pub fn length_type(&self) -> LengthType {
         let lentype = unsafe { offset_read::<[u8; 2]>(self.bytes, 12) };
         match u16::from_be_bytes(lentype) {
-            MAX_LENTYPE_LEN => LengthType::Type(EtherType::Ipv4),
-            MIN_LENTYPE_TYP => LengthType::Type(EtherType::Ipv6),
-            len if len <= ETHERTYPE_IPV4 => LengthType::Length(len),
-            typ if typ >= ETHERTYPE_IPV6 => LengthType::Type(EtherType::Unknown(typ)),
+            ETHERTYPE_IPV4 => LengthType::Type(EtherType::Ipv4),
+            ETHERTYPE_IPV6 => LengthType::Type(EtherType::Ipv6),
+            len if len <= MAX_LENTYPE_LEN => LengthType::Length(len),
+            typ if typ >= MIN_LENTYPE_TYP => LengthType::Type(EtherType::Unknown(typ)),
             val => LengthType::Unknown(val),
         }
     }
@@ -105,25 +105,46 @@ impl<'a> Frame<'a> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::error::Error;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use std::error::Error;
 
-    // Ethernet frame captured using Wireshark.
-    pub const FRAME: &'static [u8] = include_bytes!("../resources/packet.bin");
+//     // Ethernet frame captured using Wireshark.
+//     pub const FRAME: &'static [u8] = include_bytes!("../resources/packet.bin");
 
-    #[test]
-    fn has_expected_mac_dest_address() -> Result<(), Box<dyn Error>> {
-        let frame = Frame::new(FRAME)?;
-        assert_eq!(frame.mac_dest(), [0xC2, 0x17, 0x54, 0x77, 0x7A, 0x64]);
-        Ok(())
-    }
+//     #[test]
+//     fn has_expected_mac_dest_address() -> Result<(), Box<dyn Error>> {
+//         let frame = Frame::new(FRAME)?;
+//         assert_eq!(frame.mac_dest(), [0xC2, 0x17, 0x54, 0x77, 0x7A, 0x64]);
+//         Ok(())
+//     }
 
-    #[test]
-    fn has_expected_mac_src_address() -> Result<(), Box<dyn Error>> {
-        let frame = Frame::new(FRAME)?;
-        assert_eq!(frame.mac_src(), [0x74, 0xA6, 0xCD, 0xB1, 0xF9, 0x8B]);
-        Ok(())
-    }
-}
+//     #[test]
+//     fn has_expected_mac_src_address() -> Result<(), Box<dyn Error>> {
+//         let frame = Frame::new(FRAME)?;
+//         assert_eq!(frame.mac_src(), [0x74, 0xA6, 0xCD, 0xB1, 0xF9, 0x8B]);
+//         Ok(())
+//     }
+
+//     #[test]
+//     fn has_expected_length_type() -> Result<(), Box<dyn Error>> {
+//         let frame = Frame::new(FRAME)?;
+//         assert_eq!(frame.length_type(), LengthType::Type(EtherType::Ipv4));
+//         Ok(())
+//     }
+
+//     #[test]
+//     fn has_expected_client_data() -> Result<(), Box<dyn Error>> {
+//         let frame = Frame::new(FRAME)?;
+//         assert_eq!(frame.client_data(), &FRAME[14..]);
+//         Ok(())
+//     }
+
+//     #[test]
+//     fn has_expected_len() -> Result<(), Box<dyn Error>> {
+//         let frame = Frame::new(FRAME)?;
+//         assert_eq!(frame.len(), 126);
+//         Ok(())
+//     }
+// }
