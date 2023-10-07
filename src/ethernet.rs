@@ -1,16 +1,5 @@
 use crate::{offset_read, Error};
 
-// Minimum length of an Ethernet frame.
-const MIN_FRAME_LEN: usize = 64;
-// When the length/type field is below this value it is considered a length.
-const MAX_LENTYPE_LEN: u16 = 0x5DC;
-// When the length/type field is above this value it is considered an EtherType.
-const MIN_LENTYPE_TYP: u16 = 0x600;
-// EtherType code for IPv4.
-const ETHERTYPE_IPV4: u16 = 0x800;
-// EtherType code for IPv6.
-const ETHERTYPE_IPV6: u16 = 0x86DD;
-
 /// An MAC packet as defined by the IEEE Standard for Ethernet (IEEE Std
 /// 802.3-2022). All values are returned in network byte order.
 ///
@@ -23,25 +12,6 @@ const ETHERTYPE_IPV6: u16 = 0x86DD;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Frame<'a> {
     bytes: &'a [u8],
-}
-
-/// The Ethernet header has a "length/type" field which represents either the
-/// length of the client data or an [`EtherType`] depending on the value (See
-/// clause `3.2.6`).
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum LengthType {
-    Length(u16),
-    Type(EtherType),
-    Unknown(u16),
-}
-
-// See the [IANA list of EtherType
-// values](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml#ieee-802-numbers-1).
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum EtherType {
-    Ipv4,
-    Ipv6,
-    Unknown(u16),
 }
 
 impl<'a> Frame<'a> {
@@ -104,6 +74,36 @@ impl<'a> Frame<'a> {
         self.bytes.len()
     }
 }
+
+/// The Ethernet header has a "length/type" field which represents either the
+/// length of the client data or an [`EtherType`] depending on the value (See
+/// clause `3.2.6`).
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum LengthType {
+    Length(u16),
+    Type(EtherType),
+    Unknown(u16),
+}
+
+// See the [IANA list of EtherType
+// values](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml#ieee-802-numbers-1).
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum EtherType {
+    Ipv4,
+    Ipv6,
+    Unknown(u16),
+}
+
+// Minimum length of an Ethernet frame.
+const MIN_FRAME_LEN: usize = 64;
+// When the length/type field is below this value it is considered a length.
+const MAX_LENTYPE_LEN: u16 = 0x5DC;
+// When the length/type field is above this value it is considered an EtherType.
+const MIN_LENTYPE_TYP: u16 = 0x600;
+// EtherType code for IPv4.
+const ETHERTYPE_IPV4: u16 = 0x800;
+// EtherType code for IPv6.
+const ETHERTYPE_IPV6: u16 = 0x86DD;
 
 #[cfg(test)]
 mod tests {
