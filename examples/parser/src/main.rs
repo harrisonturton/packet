@@ -14,15 +14,21 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     println!("Reading {path}");
     let bytes = std::fs::read(path)?;
 
-    let packet = netlib::ethernet::Frame::new(&bytes)?;
+    println!("ETHERNET FRAME");
+    let frame = packet::ethernet::Frame::new(&bytes)?;
 
     println!(
         "dest: {:x?} src: {:x?} type: {:?} data: {:x?}",
-        packet.mac_dest(),
-        packet.mac_src(),
-        packet.length_type(),
-        packet.client_data()
+        frame.dest(),
+        frame.source(),
+        frame.length_type(),
+        frame.payload()
     );
+
+    println!("IPv4 PACKET");
+    let payload = frame.payload();
+    let packet = packet::ipv4::Packet::new(payload)?;
+    println!("{:?} {:?}", packet.source(), packet.dest());
 
     Ok(())
 }

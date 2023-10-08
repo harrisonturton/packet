@@ -34,7 +34,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "netlib"
+name = "packet"
 version = "0.1.0"
 dependencies = [
  "thiserror",
@@ -45,7 +45,7 @@ name = "parser"
 version = "0.1.0"
 dependencies = [
  "argh",
- "netlib",
+ "packet",
 ]
 
 [[package]]
