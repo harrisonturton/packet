@@ -1,0 +1,114 @@
+[
+  {
+    "_index": "packets-2023-10-09",
+    "_type": "doc",
+    "_score": null,
+    "_source": {
+      "layers": {
+        "frame": {
+          "frame.section_number": "1",
+          "frame.interface_id": "0",
+          "frame.interface_id_tree": {
+            "frame.interface_name": "en0",
+            "frame.interface_description": "Wi-Fi"
+          },
+          "frame.encap_type": "1",
+          "frame.time": "Oct  9, 2023 13:09:56.813493000 AEDT",
+          "frame.offset_shift": "0.000000000",
+          "frame.time_epoch": "1696817396.813493000",
+          "frame.time_delta": "0.030129000",
+          "frame.time_delta_displayed": "0.030129000",
+          "frame.time_relative": "0.747992000",
+          "frame.number": "38",
+          "frame.len": "86",
+          "frame.cap_len": "86",
+          "frame.marked": "1",
+          "frame.ignored": "0",
+          "frame.protocols": "eth:ethertype:ip:udp:data",
+          "frame.coloring_rule.name": "UDP",
+          "frame.coloring_rule.string": "udp"
+        },
+        "eth": {
+          "eth.dst": "ac:17:c8:cc:96:af",
+          "eth.dst_tree": {
+            "eth.dst_resolved": "CiscoMer_cc:96:af",
+            "eth.dst.oui": "11278280",
+            "eth.dst.oui_resolved": "Cisco Meraki",
+            "eth.addr": "ac:17:c8:cc:96:af",
+            "eth.addr_resolved": "CiscoMer_cc:96:af",
+            "eth.addr.oui": "11278280",
+            "eth.addr.oui_resolved": "Cisco Meraki",
+            "eth.dst.lg": "0",
+            "eth.lg": "0",
+            "eth.dst.ig": "0",
+            "eth.ig": "0"
+          },
+          "eth.src": "bc:d0:74:0d:9c:12",
+          "eth.src_tree": {
+            "eth.src_resolved": "Apple_0d:9c:12",
+            "eth.src.oui": "12374132",
+            "eth.src.oui_resolved": "Apple, Inc.",
+            "eth.addr": "bc:d0:74:0d:9c:12",
+            "eth.addr_resolved": "Apple_0d:9c:12",
+            "eth.addr.oui": "12374132",
+            "eth.addr.oui_resolved": "Apple, Inc.",
+            "eth.src.lg": "0",
+            "eth.lg": "0",
+            "eth.src.ig": "0",
+            "eth.ig": "0"
+          },
+          "eth.type": "0x0800"
+        },
+        "ip": {
+          "ip.version": "4",
+          "ip.hdr_len": "20",
+          "ip.dsfield": "0x00",
+          "ip.dsfield_tree": {
+            "ip.dsfield.dscp": "0",
+            "ip.dsfield.ecn": "0"
+          },
+          "ip.len": "72",
+          "ip.id": "0x0000",
+          "ip.flags": "0x02",
+          "ip.flags_tree": {
+            "ip.flags.rb": "0",
+            "ip.flags.df": "1",
+            "ip.flags.mf": "0"
+          },
+          "ip.frag_offset": "0",
+          "ip.ttl": "64",
+          "ip.proto": "17",
+          "ip.checksum": "0xa3ed",
+          "ip.checksum.status": "2",
+          "ip.src": "10.0.53.7",
+          "ip.addr": "10.0.53.7",
+          "ip.src_host": "10.0.53.7",
+          "ip.host": "10.0.53.7",
+          "ip.dst": "104.17.239.159",
+          "ip.addr": "104.17.239.159",
+          "ip.dst_host": "104.17.239.159",
+          "ip.host": "104.17.239.159"
+        },
+        "udp": {
+          "udp.srcport": "52152",
+          "udp.dstport": "443",
+          "udp.port": "52152",
+          "udp.port": "443",
+          "udp.length": "52",
+          "udp.checksum": "0xdaa7",
+          "udp.checksum.status": "2",
+          "udp.stream": "8",
+          "Timestamps": {
+            "udp.time_relative": "0.048449000",
+            "udp.time_delta": "0.030129000"
+          },
+          "udp.payload": "57:01:d9:bc:bb:86:cb:01:f6:be:d8:51:bb:0c:cb:1a:73:b1:ce:bd:55:86:a2:4d:7f:23:05:3d:76:f5:91:11:1b:f2:62:b8:68:3e:20:07:0f:21:d7:77"
+        },
+        "data": {
+          "data.data": "57:01:d9:bc:bb:86:cb:01:f6:be:d8:51:bb:0c:cb:1a:73:b1:ce:bd:55:86:a2:4d:7f:23:05:3d:76:f5:91:11:1b:f2:62:b8:68:3e:20:07:0f:21:d7:77",
+          "data.len": "44"
+        }
+      }
+    }
+  }
+]
