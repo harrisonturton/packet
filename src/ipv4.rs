@@ -65,7 +65,9 @@ impl<'a> Packet<'a> {
     pub fn header_len(&self) -> u8 {
         // u32 has 4 bytes which is below u8::MAX, so it won't be truncated
         #[allow(clippy::cast_possible_truncation)]
-        unsafe { (offset_read::<u8>(self.bytes, 0) & 0xF) * size_of::<u32>() as u8 }
+        unsafe {
+            (offset_read::<u8>(self.bytes, 0) & 0xF) * size_of::<u32>() as u8
+        }
     }
 
     /// Extract the differentiate service code point (DSCP).
@@ -169,8 +171,7 @@ impl<'a> Packet<'a> {
     #[inline]
     #[must_use]
     pub fn payload(&self) -> &[u8] {
-        let start = self.header_len() as usize * size_of::<u32>();
-        &self.bytes[start..]
+        &self.bytes[self.header_len() as usize..]
     }
 }
 
@@ -277,8 +278,9 @@ mod tests {
     // IPv4 packet wrapped in an Ethernet frame, captured using Wireshark.
     pub const FRAME_WITH_PACKET: &'static [u8] = include_bytes!("../resources/ethernet-ipv4.bin");
 
-    // IPv4 with junk options created using scapy 
-    pub const PACKET_WITH_OPTS: &'static [u8] = include_bytes!("../resources/ipv4-with-options.bin");
+    // IPv4 with junk options created using scapy
+    pub const PACKET_WITH_OPTS: &'static [u8] =
+        include_bytes!("../resources/ipv4-with-options.bin");
 
     #[test]
     fn packet_returns_err_when_byte_slice_too_short() -> Result<(), Box<dyn Error>> {
