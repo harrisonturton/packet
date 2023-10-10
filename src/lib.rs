@@ -52,13 +52,22 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[error("invalid argument: {0}")]
     CannotParse(&'static str),
+    #[error("not enough space: {0}")]
+    NotEnoughSpace(&'static str),
 }
 
-// Read a value of type T at an arbitrary byte offset from a raw byte array.
+// Read a value of type T at an arbitrary byte offset from a byte array.
 #[inline]
 #[must_use]
-pub(crate) unsafe fn offset_read<T>(bytes: &[u8], offset: isize) -> T {
-    (bytes.as_ptr().offset(offset) as *mut T).read()
+pub(crate) unsafe fn offset_read<T>(source: &[u8], offset: isize) -> T {
+    (source.as_ptr().offset(offset) as *mut T).read()
+}
+
+// Write a value of type T at an arbitrary byte offset from a byte array. This
+// copies the bytes from `value` into `dest`.
+#[inline]
+pub(crate) unsafe fn offset_write(dest: &mut [u8], offset: usize, value: &[u8]) {
+    dest[offset..offset+value.len()].copy_from_slice(value)
 }
 
 // Check if the nth bit is set
@@ -70,12 +79,20 @@ pub(crate) fn bitset(byte: u8, n: usize) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{bitset, offset_read, offset_write};
 
     #[test]
     fn offset_read_returns_expected_value() {
         let bytes = &[0, 0xFF, 0xF, 0, 0];
         assert_eq!(unsafe { offset_read::<u16>(bytes, 1) }, 0xFFF);
+    }
+
+    #[test]
+    fn offset_write_performs_expected_mutation() -> Result<(), Box<dyn std::error::Error>> {
+        let bytes = &mut [0, 0, 0, 0, 0];
+        unsafe { offset_write(bytes, 1, &[0xA, 0xB]) };
+        assert_eq!(&[0, 0xA, 0xB, 0, 0], bytes);
+        Ok(())
     }
 
     #[test]

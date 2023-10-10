@@ -10,7 +10,7 @@
 //! stripped by the NIC anyway, so they're not usually available. It also does
 //! not support extracting the frame check sequence (FCS) because it is often
 //! innacurate (or stripped) due to checksum offloading on the NIC.
-use crate::{offset_read, Error};
+use crate::{offset_read, offset_write, Error, Result};
 use std::fmt::Debug;
 
 /// An Ethernet frame.
@@ -39,7 +39,7 @@ impl<'a> Frame<'a> {
     /// enforced to ensure safety at runtime.
     #[inline]
     #[must_use]
-    pub fn new(bytes: &'a [u8]) -> Result<Frame, Error> {
+    pub fn new(bytes: &'a [u8]) -> Result<Frame<'a>> {
         if bytes.len() >= MIN_FRAME_LEN {
             Ok(Frame { bytes })
         } else {
@@ -47,18 +47,25 @@ impl<'a> Frame<'a> {
         }
     }
 
+    /// Construct a new [`Frame`] using a [`FrameBuilder`].
+    #[inline]
+    #[must_use]
+    pub fn builder(bytes: &'a mut [u8]) -> FrameBuilder<'a> {
+        FrameBuilder::new(bytes)
+    }
+
     /// Extract the destination MAC address.
     #[inline]
     #[must_use]
     pub fn dest(&self) -> MacAddr {
-        MacAddr::from(unsafe { offset_read::<[u8; 6]>(self.bytes, 0) })
+        MacAddr::from(unsafe { offset_read::<[u8; 6]>(self.bytes(), 0) })
     }
 
     /// Extract the source MAC address.
     #[inline]
     #[must_use]
     pub fn source(&self) -> MacAddr {
-        MacAddr::from(unsafe { offset_read::<[u8; 6]>(self.bytes, 6) })
+        MacAddr::from(unsafe { offset_read::<[u8; 6]>(self.bytes(), 6) })
     }
 
     /// Extract the length/type field.
@@ -69,28 +76,98 @@ impl<'a> Frame<'a> {
     #[inline]
     #[must_use]
     pub fn length_type(&self) -> LengthType {
-        LengthType::new(u16::from_be_bytes(unsafe { offset_read(self.bytes, 12) }))
+        LengthType::new(u16::from_be_bytes(unsafe { offset_read(self.bytes(), 12) }))
     }
 
     /// Extract the client data field.
     #[inline]
     #[must_use]
-    pub fn payload(&self) -> &'a [u8] {
-        &self.bytes[PAYLOAD_START..]
+    pub fn payload(&self) -> &[u8] {
+        &self.bytes()[PAYLOAD_START..]
     }
 
     /// Total length of the frame.
     #[inline]
     #[must_use]
     pub fn len(&self) -> usize {
-        self.bytes.len()
+        self.bytes().len()
+    }
+
+    // Get a reference to the bytes used by this frame.
+    #[inline]
+    #[must_use]
+    pub fn bytes(&self) -> &[u8] {
+        self.bytes.as_ref()
+    }
+}
+
+/// Builder for constructing [`Frame`] instances.
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct FrameBuilder<'a> {
+    bytes: &'a mut [u8],
+}
+
+impl<'a> FrameBuilder<'a> {
+    /// Create a new [`FrameBuilder`] instance from an underlying byte slice.
+    #[inline]
+    #[must_use]
+    pub fn new(bytes: &'a mut [u8]) -> Self {
+        Self { bytes }
+    }
+
+    /// Set the destination MAC address.
+    #[inline]
+    #[must_use]
+    pub fn dest(mut self, dest: MacAddr) -> Self {
+        unsafe { offset_write(&mut self.bytes, 0, &dest.octets) };
+        self
+    }
+
+    /// Set the source MAC address.
+    #[inline]
+    #[must_use]
+    pub fn source(mut self, source: MacAddr) -> Self {
+        unsafe { offset_write(&mut self.bytes, 6, &source.octets) };
+        self
+    }
+
+    /// Set the "length/type" field as an [`EtherType`].
+    #[inline]
+    #[must_use]
+    pub fn ethertype(mut self, ethertype: EtherType) -> Self {
+        let ethertype: u16 = ethertype.into();
+        unsafe { offset_write(&mut self.bytes, 12, &ethertype.to_be_bytes()) };
+        self
+    }
+
+    /// Copy the payload into the buffer.
+    /// 
+    /// # Errors
+    /// 
+    /// Fails when there is not enough space in the buffer for the payload.
+    #[inline]
+    #[must_use]
+    pub fn payload(mut self, payload: &[u8]) -> Result<Self> {
+        if self.bytes.len() - PAYLOAD_START < payload.len() {
+            return Err(Error::NotEnoughSpace("buffer not large enough to write payload"));
+        }
+
+        unsafe { offset_write(&mut self.bytes, PAYLOAD_START, &payload) };
+        Ok(self)
+    }
+
+    /// Create the [`Frame`].
+    #[inline]
+    #[must_use]
+    pub fn build(self) -> Result<Frame<'a>> {
+        Frame::new(self.bytes)
     }
 }
 
 /// The Ethernet header has a "length/type" field which represents either the
 /// length of the client data or an [`EtherType`] depending on the value (See
 /// clause 3.2.6).
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum LengthType {
     Length(u16),
     Type(EtherType),
@@ -114,11 +191,21 @@ impl LengthType {
 
 /// See the [IANA list of EtherType
 /// values](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml#ieee-802-numbers-1).
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum EtherType {
     Ipv4,
     Ipv6,
     Unknown(u16),
+}
+
+impl From<EtherType> for u16 {
+    fn from(value: EtherType) -> Self {
+        match value {
+            EtherType::Ipv4 => ETHERTYPE_IPV4,
+            EtherType::Ipv6 => ETHERTYPE_IPV6,
+            EtherType::Unknown(typ) => typ,
+        }
+    }
 }
 
 /// A MAC address.
@@ -177,7 +264,7 @@ const PAYLOAD_START: usize = 14;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{EtherType, Frame, LengthType, MacAddr, ETHERTYPE_IPV4, ETHERTYPE_IPV6};
     use std::error::Error;
 
     // IP packet wrapped in an Ethernet frame, captured using Wireshark.
@@ -192,20 +279,16 @@ mod tests {
     #[test]
     fn frame_has_expected_dest_address() -> Result<(), Box<dyn Error>> {
         let frame = Frame::new(FRAME)?;
-        assert_eq!(
-            frame.dest(),
-            MacAddr::new(0x74, 0xA6, 0xCD, 0xB1, 0xF9, 0x8B)
-        );
+        let addr = MacAddr::new(0x74, 0xA6, 0xCD, 0xB1, 0xF9, 0x8B);
+        assert_eq!(frame.dest(), addr);
         Ok(())
     }
 
     #[test]
     fn frame_has_expected_source_address() -> Result<(), Box<dyn Error>> {
         let frame = Frame::new(FRAME)?;
-        assert_eq!(
-            frame.source(),
-            MacAddr::new(0xC2, 0x17, 0x54, 0x77, 0x7A, 0x64)
-        );
+        let addr = MacAddr::new(0xC2, 0x17, 0x54, 0x77, 0x7A, 0x64);
+        assert_eq!(frame.source(), addr);
         Ok(())
     }
 
@@ -227,6 +310,24 @@ mod tests {
     fn frame_has_expected_len() -> Result<(), Box<dyn Error>> {
         let frame = Frame::new(FRAME)?;
         assert_eq!(frame.len(), 126);
+        Ok(())
+    }
+
+    #[test]
+    fn frame_builder_returns_expected_frame() -> Result<(), Box<dyn Error>> {
+        let mut buf = [0; 1024];
+        let frame = Frame::builder(&mut buf)
+            .source(MacAddr::new(0, 0, 0, 0, 0, 0))
+            .dest(MacAddr::new(10, 10, 10, 10, 10, 10))
+            .ethertype(EtherType::Ipv4)
+            .payload(&[1, 2, 3])?
+            .build()?;
+
+        assert_eq!(frame.source(), MacAddr::new(0, 0, 0, 0, 0, 0));
+        assert_eq!(frame.dest(), MacAddr::new(10, 10, 10, 10, 10, 10));
+        assert_eq!(frame.length_type(), LengthType::Type(EtherType::Ipv4));
+        assert_eq!(&frame.payload()[0..5], &[1, 2, 3, 0, 0]);
+
         Ok(())
     }
 
