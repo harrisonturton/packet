@@ -153,7 +153,7 @@ impl Debug for MacAddr {
 impl ToString for MacAddr {
     fn to_string(&self) -> String {
         let [a, b, c, d, e, f] = self.octets;
-        format!("{a:x?}:{b:x?}:{c:x?}:{d:x?}:{e:x?}:{f:x?}")
+        format!("{a:02x?}:{b:02x?}:{c:02x?}:{d:02x?}:{e:02x?}:{f:02x?}")
     }
 }
 
@@ -263,5 +263,17 @@ mod tests {
         let actual = LengthType::new(1530);
         let expected = LengthType::Invalid(1530);
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn macaddr_to_string_gives_expected_value() {
+        let addr = MacAddr::new(0, 10, 20, 5, 40, 50);
+        assert_eq!(addr.to_string(), "00:0a:14:05:28:32".to_string());
+    }
+
+    #[test]
+    fn macaddr_fmt_gives_expected_value() {
+        let addr = MacAddr::new(0, 10, 20, 5, 40, 50);
+        assert_eq!(format!("{addr:?}"), "00:0a:14:05:28:32".to_string());
     }
 }
