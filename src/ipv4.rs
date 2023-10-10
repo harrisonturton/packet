@@ -43,7 +43,7 @@ impl<'a> Packet<'a> {
     #[inline]
     #[must_use]
     pub fn new(bytes: &'a [u8]) -> Result<Packet> {
-        if bytes.len() >= MIN_HEADER_LEN as usize {
+        if bytes.len() >= Self::MIN_HEADER_LEN as usize {
             Ok(Packet { bytes })
         } else {
             Err(Error::CannotParse("packet too small"))
@@ -74,14 +74,14 @@ impl<'a> Packet<'a> {
     #[inline]
     #[must_use]
     pub fn dscp(&self) -> Dscp {
-        Dscp::new(unsafe { offset_read::<u8>(self.bytes, 1) & !0b11 })
+        Dscp::from(unsafe { offset_read::<u8>(self.bytes, 1) & !0b11 })
     }
 
     /// Extract the explicit congestion notification field (ECN).
     #[inline]
     #[must_use]
     pub fn ecn(&self) -> Ecn {
-        Ecn::new(unsafe { offset_read::<u8>(self.bytes, 1) & 0b11 })
+        Ecn::from(unsafe { offset_read::<u8>(self.bytes, 1) & 0b11 })
     }
 
     /// Extract the total length.
@@ -151,7 +151,7 @@ impl<'a> Packet<'a> {
     #[inline]
     #[must_use]
     pub fn has_options(&self) -> bool {
-        self.header_len() - MIN_HEADER_LEN > 0
+        self.header_len() - Self::MIN_HEADER_LEN > 0
     }
 
     /// Extract the options. You'll have to parse them yourself.
@@ -162,7 +162,7 @@ impl<'a> Packet<'a> {
             return None;
         }
 
-        let start = MIN_HEADER_LEN;
+        let start = Self::MIN_HEADER_LEN;
         let end = start + (self.header_len() - start);
         Some(&self.bytes[start as usize..end as usize])
     }
@@ -173,65 +173,92 @@ impl<'a> Packet<'a> {
     pub fn payload(&self) -> &[u8] {
         &self.bytes[self.header_len() as usize..]
     }
+
+    /// Minimum length of the header.
+    pub const MIN_HEADER_LEN: u8 = 20;
 }
 
 /// Strongly-typed wrapper for "differentiated service code point" (DSCP) field
 /// in the IP packet.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct Dscp {
-    data: u8,
+    traffic_class: u8,
+    drop_prob: u8,
 }
 
 impl Dscp {
     /// Create a new [`Dscp`] instance.
     #[inline]
     #[must_use]
-    pub fn new(data: u8) -> Self {
-        Self { data }
+    pub fn new(traffic_class: u8, drop_prob: u8) -> Self {
+        Self {
+            traffic_class,
+            drop_prob,
+        }
     }
 
     /// Extract the assured forwarding class selector.
     #[inline]
     #[must_use]
-    pub fn forwarding_class(&self) -> u8 {
-        u8::from_be_bytes([self.data >> 3])
+    pub fn traffic_class(&self) -> u8 {
+        self.traffic_class
     }
 
     /// Extract the drop preference.
     #[inline]
     #[must_use]
-    pub fn drop_preference(&self) -> u8 {
-        u8::from_be_bytes([(self.data & !0b11_1001) >> 1])
+    pub fn drop_probability(&self) -> u8 {
+        self.drop_prob
     }
 }
 
-/// Strongly typed wrapper for the explicit congestion notification (ECN) field
-/// in the IP header.
+impl From<u8> for Dscp {
+    fn from(value: u8) -> Self {
+        let value = value >> 2; // Strip ECN and align
+        let class = u8::from_be_bytes([value >> 3]);
+        let drop_prob = u8::from_be_bytes([value & 0b111]);
+        Self::new(class, drop_prob)
+    }
+}
+
+/// Wrapper for the explicit congestion notification (ECN) header.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct Ecn {
-    data: u8,
+    congested: bool,
+    ecn_capable: bool,
 }
 
 impl Ecn {
     /// Create a new [`Ecn`] instance.
     #[inline]
     #[must_use]
-    pub fn new(data: u8) -> Self {
-        Self { data }
+    pub fn new(congested: bool, ecn_capable: bool) -> Self {
+        Self {
+            congested,
+            ecn_capable,
+        }
     }
 
     /// Whether the packet experienced significant congestion.
     #[inline]
     #[must_use]
     pub fn congested(&self) -> bool {
-        bitset(self.data, 0)
+        self.congested
     }
 
     /// Whether the transport supports ECN.
     #[inline]
     #[must_use]
     pub fn ecn_capable(&self) -> bool {
-        bitset(self.data, 1)
+        self.ecn_capable
+    }
+}
+
+impl From<u8> for Ecn {
+    fn from(value: u8) -> Self {
+        let congested = bitset(value, 0);
+        let ecn_capable = bitset(value, 1);
+        Ecn::new(congested, ecn_capable)
     }
 }
 
@@ -266,9 +293,6 @@ impl Flags {
     }
 }
 
-// Minimum length of an IPv4 packet.
-const MIN_HEADER_LEN: u8 = 20;
-
 #[cfg(test)]
 mod tests {
     use super::{Dscp, Ecn, Flags, Packet};
@@ -279,8 +303,7 @@ mod tests {
     pub const FRAME_WITH_PACKET: &'static [u8] = include_bytes!("../resources/ethernet-ipv4.bin");
 
     // IPv4 with junk options created using scapy
-    pub const PACKET_WITH_OPTS: &'static [u8] =
-        include_bytes!("../resources/ipv4-with-options.bin");
+    pub const PACKET_WITH_OPTS: &'static [u8] = include_bytes!("../resources/ipv4-with-opts.bin");
 
     #[test]
     fn packet_returns_err_when_byte_slice_too_short() -> Result<(), Box<dyn Error>> {
@@ -310,7 +333,7 @@ mod tests {
     fn packet_has_expected_dscp() -> Result<(), Box<dyn Error>> {
         let frame = Frame::new(FRAME_WITH_PACKET)?;
         let packet = Packet::new(frame.payload())?;
-        assert_eq!(packet.dscp(), Dscp::new(0));
+        assert_eq!(packet.dscp(), Dscp::from(0));
         Ok(())
     }
 
@@ -420,38 +443,32 @@ mod tests {
     fn packet_has_expected_ecn() -> Result<(), Box<dyn Error>> {
         let frame = Frame::new(FRAME_WITH_PACKET)?;
         let packet = Packet::new(frame.payload())?;
-        assert_eq!(packet.ecn(), Ecn::new(0));
+        assert_eq!(packet.ecn(), Ecn::from(0));
         Ok(())
     }
 
     #[test]
-    fn dscp_has_expected_forwarding_class() {
-        let dscp = Dscp::new(0b001010);
-        assert_eq!(dscp.forwarding_class(), 1);
+    fn dscp_has_expected_traffic_class() {
+        let dscp = Dscp::from(0b0010_0000);
+        assert_eq!(dscp.traffic_class(), 1);
     }
 
     #[test]
-    fn dscp_has_expected_drop_preference() {
-        let dscp = Dscp::new(0b001010);
-        assert_eq!(dscp.drop_preference(), 1);
+    fn dscp_has_expected_drop_probability() {
+        let dscp = Dscp::from(0b0000_0100);
+        assert_eq!(dscp.drop_probability(), 1);
     }
 
     #[test]
     fn ecn_has_expected_congestion_flag() {
-        let ecn = Ecn::new(0b10);
+        let ecn = Ecn::from(0b10);
         assert_eq!(ecn.congested(), false);
     }
 
     #[test]
     fn ecn_has_expected_ecn_capable_flag() {
-        let ecn = Ecn::new(0b10);
+        let ecn = Ecn::from(0b10);
         assert_eq!(ecn.ecn_capable(), true);
-    }
-
-    #[test]
-    fn ecn_has_expected_drop_preference() {
-        let dscp = Dscp::new(0b001010);
-        assert_eq!(dscp.drop_preference(), 1);
     }
 
     #[test]
