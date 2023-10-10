@@ -182,42 +182,47 @@ impl<'a> Packet<'a> {
 /// in the IP packet.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct Dscp {
-    traffic_class: u8,
-    drop_prob: u8,
+    class: u8,
+    drop: u8,
 }
 
 impl Dscp {
     /// Create a new [`Dscp`] instance.
     #[inline]
     #[must_use]
-    pub fn new(traffic_class: u8, drop_prob: u8) -> Self {
-        Self {
-            traffic_class,
-            drop_prob,
-        }
+    pub fn new(class: u8, drop: u8) -> Self {
+        Self { class, drop }
     }
 
     /// Extract the assured forwarding class selector.
     #[inline]
     #[must_use]
     pub fn traffic_class(&self) -> u8 {
-        self.traffic_class
+        self.class
     }
 
-    /// Extract the drop preference.
+    /// Extract the drop probability.
     #[inline]
     #[must_use]
     pub fn drop_probability(&self) -> u8 {
-        self.drop_prob
+        self.drop
     }
 }
 
 impl From<u8> for Dscp {
     fn from(value: u8) -> Self {
-        let value = value >> 2; // Strip ECN and align
-        let class = u8::from_be_bytes([value >> 3]);
-        let drop_prob = u8::from_be_bytes([value & 0b111]);
-        Self::new(class, drop_prob)
+        let value = value >> 2; // Strip ECN
+        let class = u8::from_be(value >> 3);
+        let drop = u8::from_be(value & 0b111);
+        Self::new(class, drop)
+    }
+}
+
+impl From<Dscp> for u8 {
+    fn from(dscp: Dscp) -> Self {
+        let class = dscp.traffic_class().to_be();
+        let drop = dscp.drop_probability().to_be();
+        (class << 5) | (drop << 2)
     }
 }
 
@@ -225,18 +230,15 @@ impl From<u8> for Dscp {
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct Ecn {
     congested: bool,
-    ecn_capable: bool,
+    capable: bool,
 }
 
 impl Ecn {
     /// Create a new [`Ecn`] instance.
     #[inline]
     #[must_use]
-    pub fn new(congested: bool, ecn_capable: bool) -> Self {
-        Self {
-            congested,
-            ecn_capable,
-        }
+    pub fn new(congested: bool, capable: bool) -> Self {
+        Self { congested, capable }
     }
 
     /// Whether the packet experienced significant congestion.
@@ -246,19 +248,27 @@ impl Ecn {
         self.congested
     }
 
-    /// Whether the transport supports ECN.
+    /// Whether the transport supports ECN, i.e. is "ECN capable".
     #[inline]
     #[must_use]
-    pub fn ecn_capable(&self) -> bool {
-        self.ecn_capable
+    pub fn capable(&self) -> bool {
+        self.capable
     }
 }
 
 impl From<u8> for Ecn {
     fn from(value: u8) -> Self {
         let congested = bitset(value, 0);
-        let ecn_capable = bitset(value, 1);
-        Ecn::new(congested, ecn_capable)
+        let capable = bitset(value, 1);
+        Ecn::new(congested, capable)
+    }
+}
+
+impl From<Ecn> for u8 {
+    fn from(ecn: Ecn) -> Self {
+        let congested = ecn.congested() as u8;
+        let capable = ecn.capable() as u8;
+        (congested << 1) | capable
     }
 }
 
@@ -460,6 +470,19 @@ mod tests {
     }
 
     #[test]
+    fn dscp_from_u8_gives_expected_value() {
+        let dscp = Dscp::from(0b11111101);
+        assert_eq!(dscp, Dscp::new(7, 7));
+    }
+
+    #[test]
+    fn dscp_into_u8_gives_expected_value() {
+        let octet = 0b11111100;
+        let dscp: u8 = Dscp::from(octet).into();
+        assert_eq!(dscp, octet);
+    }
+
+    #[test]
     fn ecn_has_expected_congestion_flag() {
         let ecn = Ecn::from(0b10);
         assert_eq!(ecn.congested(), false);
@@ -468,7 +491,19 @@ mod tests {
     #[test]
     fn ecn_has_expected_ecn_capable_flag() {
         let ecn = Ecn::from(0b10);
-        assert_eq!(ecn.ecn_capable(), true);
+        assert_eq!(ecn.capable(), true);
+    }
+
+    #[test]
+    fn ecn_from_u8_gives_expected_value() {
+        let ecn = Ecn::from(0b11111110);
+        assert_eq!(ecn, Ecn::new(false, true));
+    }
+
+    #[test]
+    fn ecn_into_u8_gives_expected_value() {
+        let ecn: u8 = Ecn::new(true, false).into();
+        assert_eq!(ecn, 0b10);
     }
 
     #[test]
