@@ -43,7 +43,7 @@ impl<'a> Frame<'a> {
         if bytes.len() >= MIN_FRAME_LEN {
             Ok(Frame { bytes })
         } else {
-            return Err(Error::CannotParse("frame too small"));
+            Err(Error::CannotParse("frame too small"))
         }
     }
 
