@@ -67,7 +67,7 @@ pub(crate) unsafe fn offset_read<T>(source: &[u8], offset: isize) -> T {
 // copies the bytes from `value` into `dest`.
 #[inline]
 pub(crate) unsafe fn offset_write(dest: &mut [u8], offset: usize, value: &[u8]) {
-    dest[offset..offset+value.len()].copy_from_slice(value)
+    dest[offset..offset+value.len()].copy_from_slice(value);
 }
 
 // Check if the nth bit is set
