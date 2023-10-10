@@ -58,14 +58,14 @@ impl<'a> Frame<'a> {
     #[inline]
     #[must_use]
     pub fn dest(&self) -> MacAddr {
-        MacAddr::from(unsafe { offset_read::<[u8; 6]>(self.bytes(), 0) })
+        MacAddr::from(unsafe { offset_read::<[u8; 6]>(self.bytes, 0) })
     }
 
     /// Extract the source MAC address.
     #[inline]
     #[must_use]
     pub fn source(&self) -> MacAddr {
-        MacAddr::from(unsafe { offset_read::<[u8; 6]>(self.bytes(), 6) })
+        MacAddr::from(unsafe { offset_read::<[u8; 6]>(self.bytes, 6) })
     }
 
     /// Extract the length/type field.
@@ -76,28 +76,21 @@ impl<'a> Frame<'a> {
     #[inline]
     #[must_use]
     pub fn length_type(&self) -> LengthType {
-        LengthType::new(u16::from_be_bytes(unsafe { offset_read(self.bytes(), 12) }))
+        LengthType::new(u16::from_be_bytes(unsafe { offset_read(self.bytes, 12) }))
     }
 
     /// Extract the client data field.
     #[inline]
     #[must_use]
     pub fn payload(&self) -> &[u8] {
-        &self.bytes()[PAYLOAD_START..]
+        &self.bytes[PAYLOAD_START..]
     }
 
     /// Total length of the frame.
     #[inline]
     #[must_use]
     pub fn len(&self) -> usize {
-        self.bytes().len()
-    }
-
-    // Get a reference to the bytes used by this frame.
-    #[inline]
-    #[must_use]
-    pub fn bytes(&self) -> &[u8] {
-        self.bytes.as_ref()
+        self.bytes.len()
     }
 }
 
@@ -118,25 +111,25 @@ impl<'a> FrameBuilder<'a> {
     /// Set the destination MAC address.
     #[inline]
     #[must_use]
-    pub fn dest(mut self, dest: MacAddr) -> Self {
-        unsafe { offset_write(&mut self.bytes, 0, &dest.octets) };
+    pub fn dest(self, dest: MacAddr) -> Self {
+        unsafe { offset_write(self.bytes, 0, &dest.octets) };
         self
     }
 
     /// Set the source MAC address.
     #[inline]
     #[must_use]
-    pub fn source(mut self, source: MacAddr) -> Self {
-        unsafe { offset_write(&mut self.bytes, 6, &source.octets) };
+    pub fn source(self, source: MacAddr) -> Self {
+        unsafe { offset_write(self.bytes, 6, &source.octets) };
         self
     }
 
     /// Set the "length/type" field as an [`EtherType`].
     #[inline]
     #[must_use]
-    pub fn ethertype(mut self, ethertype: EtherType) -> Self {
+    pub fn ethertype(self, ethertype: EtherType) -> Self {
         let ethertype: u16 = ethertype.into();
-        unsafe { offset_write(&mut self.bytes, 12, &ethertype.to_be_bytes()) };
+        unsafe { offset_write(self.bytes, 12, &ethertype.to_be_bytes()) };
         self
     }
 
@@ -147,16 +140,20 @@ impl<'a> FrameBuilder<'a> {
     /// Fails when there is not enough space in the buffer for the payload.
     #[inline]
     #[must_use]
-    pub fn payload(mut self, payload: &[u8]) -> Result<Self> {
+    pub fn payload(self, payload: &[u8]) -> Result<Self> {
         if self.bytes.len() - PAYLOAD_START < payload.len() {
             return Err(Error::NotEnoughSpace("buffer not large enough to write payload"));
         }
 
-        unsafe { offset_write(&mut self.bytes, PAYLOAD_START, &payload) };
+        unsafe { offset_write(self.bytes, PAYLOAD_START, payload) };
         Ok(self)
     }
 
     /// Create the [`Frame`].
+    /// 
+    /// # Errors
+    /// 
+    /// Fails when [`Frame::new`] fails.
     #[inline]
     #[must_use]
     pub fn build(self) -> Result<Frame<'a>> {
