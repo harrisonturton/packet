@@ -53,7 +53,14 @@ impl<'a> Packet<'a> {
     /// Create a new IPv4 packet from a byte array *without* checking that the
     /// array is valid. It is the responsibility of the caller to make sure the
     /// buffer is large enough for the packet.
+    /// 
+    /// # Safety
+    /// 
+    /// The buffer must be large enough to contain the IPv4 packet header and
+    /// the payload. This means it must be at least 20 bytes long, and longer if
+    /// any packet options or payload is desired.
     #[inline]
+    #[must_use]
     pub unsafe fn new_unchecked(bytes: &'a [u8]) -> Packet {
         Packet { bytes }
     }
@@ -231,7 +238,7 @@ impl<'a> PacketBuilder<'a> {
             let mask = 0b1111_0000;
             let version = version.to_be() << 4;
             let new = setbits(self.bytes[0], version, mask);
-            ptr_write(offset, &[new]);
+            ptr_write(offset, [new]);
         }
         self
     }
@@ -245,7 +252,7 @@ impl<'a> PacketBuilder<'a> {
             let offset = offsets::header_len_mut(self.bytes);
             let mask = 0b0000_1111;
             let new = setbits(self.bytes[0], len, mask);
-            ptr_write(offset, &[new]);
+            ptr_write(offset, [new]);
         }
         self
     }
@@ -259,7 +266,7 @@ impl<'a> PacketBuilder<'a> {
             let dscp: u8 = dscp.into();
             let curr = offset.read();
             let new = dscp | (curr & 0b11);
-            ptr_write(offset, &[new]);
+            ptr_write(offset, [new]);
         }
         self
     }
@@ -273,7 +280,7 @@ impl<'a> PacketBuilder<'a> {
             let ecn: u8 = ecn.into();
             let curr = offset.read();
             let new = (curr & !0b11) | ecn;
-            ptr_write(offset, &[new]);
+            ptr_write(offset, [new]);
         }
         self
     }
@@ -294,9 +301,8 @@ impl<'a> PacketBuilder<'a> {
     #[must_use]
     pub fn id(self, id: u16) -> Self {
         unsafe {
-            let id = id.to_be_bytes();
             let offset = offsets::id_mut(self.bytes);
-            ptr_write(offset, &id);
+            ptr_write(offset, id.to_be_bytes());
         }
         self
     }
@@ -596,18 +602,11 @@ mod offsets {
         offset_mut_ptr(bytes, 16)
     }
 
-    /// Get a pointer to the byte where the payload begins.
-    #[inline]
-    #[must_use]
-    pub(crate) unsafe fn payload(bytes: &[u8], options_len: isize) -> *const u8 {
-        offset_ptr(bytes, Packet::MIN_HEADER_LEN as isize + options_len)
-    }
-
     /// Get a mutable pointer to the byte where the payload begins.
     #[inline]
     #[must_use]
     pub(crate) unsafe fn payload_mut(bytes: &mut [u8], options_len: isize) -> *mut u8 {
-        offset_mut_ptr(bytes, Packet::MIN_HEADER_LEN as isize + options_len)
+        offset_mut_ptr(bytes, isize::from(Packet::MIN_HEADER_LEN) + options_len)
     }
 }
 
@@ -622,6 +621,10 @@ pub struct Dscp {
 impl Dscp {
     /// Create a new [`Dscp`] instance. Note that the class and drop probably
     /// cannot be larger than 7, since they are represented using 3 bits each.
+    /// 
+    /// # Errors
+    /// 
+    /// Fails when class or drop are larger than 7.
     #[inline]
     #[must_use]
     pub fn new(class: u8, drop: u8) -> Result<Self> {
@@ -706,8 +709,8 @@ impl From<u8> for Ecn {
 
 impl From<Ecn> for u8 {
     fn from(ecn: Ecn) -> Self {
-        let congested = ecn.congested() as u8;
-        let capable = ecn.capable() as u8;
+        let congested = u8::from(ecn.congested());
+        let capable = u8::from(ecn.capable());
         (congested << 1) | capable
     }
 }
@@ -763,8 +766,8 @@ impl From<Flags> for u8 {
     /// byte boundary. If this needs to be combined with the fragment offset,
     /// this value will needed to be shifted.
     fn from(flags: Flags) -> Self {
-        let do_not_fragment = flags.do_not_fragment as u8;
-        let more_fragments = flags.more_fragments as u8;
+        let do_not_fragment = u8::from(flags.do_not_fragment);
+        let more_fragments = u8::from(flags.more_fragments);
         (do_not_fragment << 1) | more_fragments
     }
 }

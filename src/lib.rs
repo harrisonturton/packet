@@ -60,14 +60,14 @@ pub enum Error {
 #[inline]
 #[must_use]
 pub(crate) unsafe fn offset_ptr<T>(source: &[u8], offset: isize) -> *const T {
-    source.as_ptr().offset(offset) as *const T
+    source.as_ptr().offset(offset).cast()
 }
 
 // Get a mutable pointer to a T at an arbitrary byte offset in a byte array
 #[inline]
 #[must_use]
 pub(crate) unsafe fn offset_mut_ptr<T>(source: &mut [u8], offset: isize) -> *mut T {
-    source.as_mut_ptr().offset(offset) as *mut T
+    source.as_mut_ptr().offset(offset).cast()
 }
 
 // Read a value of type T at an arbitrary byte offset from a byte array.
@@ -87,7 +87,7 @@ pub(crate) unsafe fn offset_write(dest: &mut [u8], offset: usize, value: &[u8]) 
 // Write a byte slice to a raw byte array.
 #[inline]
 pub(crate) unsafe fn ptr_write<T, K: AsRef<[u8]>>(dst: *mut T, src: K) {
-    std::ptr::copy_nonoverlapping(src.as_ref().as_ptr(), dst as *mut u8, src.as_ref().len());
+    std::ptr::copy_nonoverlapping(src.as_ref().as_ptr(), dst.cast(), src.as_ref().len());
 }
 
 // Check if the nth bit is set
