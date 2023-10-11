@@ -102,7 +102,7 @@ impl<'a> Packet<'a> {
     #[inline]
     #[must_use]
     pub fn flags(&self) -> Flags {
-        Flags::new(unsafe { offset_read::<u8>(self.bytes, 6) >> 5 })
+        Flags::from(unsafe { offset_read::<u8>(self.bytes, 6) >> 5 })
     }
 
     /// Extract the fragment offset.
@@ -275,15 +275,19 @@ impl From<Ecn> for u8 {
 /// Strongly typed wrapper for the "flags" field on the IP packet.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct Flags {
-    data: u8,
+    do_not_fragment: bool,
+    more_fragments: bool,
 }
 
 impl Flags {
     /// Create a new [`Flags`] instance.
     #[inline]
     #[must_use]
-    pub fn new(data: u8) -> Self {
-        Self { data }
+    pub fn new(do_not_fragment: bool, more_fragments: bool) -> Self {
+        Self {
+            do_not_fragment,
+            more_fragments,
+        }
     }
 
     /// True when the control flags indicates the packet should not be
@@ -291,15 +295,31 @@ impl Flags {
     #[inline]
     #[must_use]
     pub fn do_not_fragment(&self) -> bool {
-        bitset(self.data, 0)
+        self.do_not_fragment
     }
 
     /// True when the control flags indicates the packet contains the last
     /// fragment, false when there are more fragments expected.
     #[inline]
     #[must_use]
-    pub fn last_fragment(&self) -> bool {
-        !bitset(self.data, 1)
+    pub fn more_fragments(&self) -> bool {
+        self.more_fragments
+    }
+}
+
+impl From<u8> for Flags {
+    fn from(value: u8) -> Self {
+        let do_not_fragment = bitset(value, 0);
+        let more_fragments = bitset(value, 1);
+        Flags::new(do_not_fragment, more_fragments)
+    }
+}
+
+impl From<Flags> for u8 {
+    fn from(flags: Flags) -> Self {
+        let do_not_fragment = flags.do_not_fragment as u8;
+        let more_fragments = flags.more_fragments as u8;
+        do_not_fragment + more_fragments
     }
 }
 
@@ -383,7 +403,7 @@ mod tests {
     fn packet_has_expected_flags() -> Result<(), Box<dyn Error>> {
         let frame = Frame::new(FRAME_WITH_PACKET)?;
         let packet = Packet::new(frame.payload())?;
-        assert_eq!(packet.flags(), Flags::new(0b010));
+        assert_eq!(packet.flags(), Flags::from(0b010));
         Ok(())
     }
 
@@ -507,14 +527,20 @@ mod tests {
     }
 
     #[test]
-    fn flags_has_expected_do_not_fragment() {
-        let flags = Flags::new(0b10);
+    fn flags_from_u8_has_expected_do_not_fragment() {
+        let flags = Flags::from(0b10);
         assert_eq!(flags.do_not_fragment(), false);
     }
 
     #[test]
-    fn flags_has_expected_last_fragment_flag() {
-        let flags = Flags::new(0b00);
-        assert_eq!(flags.last_fragment(), true);
+    fn flags_from_u8_has_expected_more_fragments() {
+        let flags = Flags::from(0b00);
+        assert_eq!(flags.more_fragments(), false);
+    }
+
+    #[test]
+    fn ecn_into_u8_has_expected_value() {
+        let flags: u8 = Flags::new(true, false).into();
+        assert_eq!(flags, 0b10);
     }
 }
