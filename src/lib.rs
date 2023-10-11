@@ -56,6 +56,20 @@ pub enum Error {
     NotEnoughSpace(&'static str),
 }
 
+// Get a constant pointer to a T at an arbitrary byte offset in a byte array
+#[inline]
+#[must_use]
+pub(crate) unsafe fn offset_ptr<T>(source: &[u8], offset: isize) -> *const T {
+    source.as_ptr().offset(offset) as *const T
+}
+
+// Get a mutable pointer to a T at an arbitrary byte offset in a byte array
+#[inline]
+#[must_use]
+pub(crate) unsafe fn offset_mut_ptr<T>(source: &mut [u8], offset: isize) -> *mut T {
+    source.as_mut_ptr().offset(offset) as *mut T
+}
+
 // Read a value of type T at an arbitrary byte offset from a byte array.
 #[inline]
 #[must_use]
@@ -67,7 +81,13 @@ pub(crate) unsafe fn offset_read<T>(source: &[u8], offset: isize) -> T {
 // copies the bytes from `value` into `dest`.
 #[inline]
 pub(crate) unsafe fn offset_write(dest: &mut [u8], offset: usize, value: &[u8]) {
-    dest[offset..offset+value.len()].copy_from_slice(value);
+    dest[offset..offset + value.len()].copy_from_slice(value);
+}
+
+// Write a byte slice to a raw byte array.
+#[inline]
+pub(crate) unsafe fn ptr_write<T, K: AsRef<[u8]>>(dst: *mut T, src: K) {
+    std::ptr::copy_nonoverlapping(src.as_ref().as_ptr(), dst as *mut u8, src.as_ref().len());
 }
 
 // Check if the nth bit is set
@@ -77,9 +97,16 @@ pub(crate) fn bitset(byte: u8, n: usize) -> bool {
     byte & (1 << n) != 0
 }
 
+// Set bits of dst from src according to mask.
+#[must_use]
+#[inline]
+pub(crate) fn setbits(a: u8, b: u8, mask: u8) -> u8 {
+    (a & !mask) | (b & mask)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{bitset, offset_read, offset_write};
+    use super::{bitset, offset_read, offset_write, setbits};
 
     #[test]
     fn offset_read_returns_expected_value() {
@@ -97,6 +124,11 @@ mod tests {
 
     #[test]
     fn bitset_returns_expected_value() {
-        assert_eq!(bitset(0b00000100, 2), true);
+        assert_eq!(bitset(0b0000_00100, 2), true);
+    }
+
+    #[test]
+    fn setbits_returns_expected_value() {
+        assert_eq!(setbits(0b0000_0000, 0b1111_1111, 0b1111_0000), 0b1111_0000);
     }
 }
