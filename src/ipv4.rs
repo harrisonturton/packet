@@ -14,7 +14,7 @@
 //! 2. [Definition of the Differentiated Services Field (DS Field) in the IPv4 and IPv6 Headers (RFC 2474)](https://datatracker.ietf.org/doc/html/rfc2474)
 //! 3. [The Addition of Explicit Network Congestion Notification (ECN) to IP (RFC 3168)](https://datatracker.ietf.org/doc/html/rfc3168)
 use crate::{bitset, ptr_write, setbits, Error, Result};
-use std::{mem::size_of, net::Ipv4Addr};
+use std::{io::Read, mem::size_of, net::Ipv4Addr};
 
 /// An IPv4 packet.
 ///
@@ -53,9 +53,9 @@ impl<'a> Packet<'a> {
     /// Create a new IPv4 packet from a byte array *without* checking that the
     /// array is valid. It is the responsibility of the caller to make sure the
     /// buffer is large enough for the packet.
-    /// 
+    ///
     /// # Safety
-    /// 
+    ///
     /// The buffer must be large enough to contain the IPv4 packet header and
     /// the payload. This means it must be at least 20 bytes long, and longer if
     /// any packet options or payload is desired.
@@ -390,15 +390,24 @@ impl<'a> PacketBuilder<'a> {
     /// Set the payload.
     #[inline]
     #[must_use]
-    pub fn payload<P>(self, payload: P, options_len: isize) -> Self
+    pub fn payload<R>(self, mut payload: R, options_len: usize) -> Result<Self>
     where
-        P: AsRef<[u8]>,
+        R: Read,
     {
-        unsafe {
-            let offset = offsets::payload_mut(self.bytes, options_len);
-            ptr_write(offset, payload.as_ref());
+        let start = usize::from(Packet::MIN_HEADER_LEN) + options_len;
+        let buf = &mut self.bytes[start..];
+
+        let mut read = 0;
+        while read < buf.len() {
+            match payload.read(buf) {
+                Ok(0) => break,
+                Ok(n) => read += n,
+                Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+                Err(e) => return Err(Error::IoError(e)),
+            };
         }
-        self
+
+        Ok(self)
     }
 
     /// Create the [`Packet`].
@@ -417,8 +426,6 @@ impl<'a> PacketBuilder<'a> {
 
 mod offsets {
     use crate::{offset_mut_ptr, offset_ptr};
-
-    use super::Packet;
 
     /// Get a constant pointer to the byte storing the version.
     #[inline]
@@ -601,13 +608,6 @@ mod offsets {
     pub(crate) unsafe fn dest_mut(bytes: &mut [u8]) -> *mut [u8; 4] {
         offset_mut_ptr(bytes, 16)
     }
-
-    /// Get a mutable pointer to the byte where the payload begins.
-    #[inline]
-    #[must_use]
-    pub(crate) unsafe fn payload_mut(bytes: &mut [u8], options_len: isize) -> *mut u8 {
-        offset_mut_ptr(bytes, isize::from(Packet::MIN_HEADER_LEN) + options_len)
-    }
 }
 
 /// Strongly-typed wrapper for "differentiated service code point" (DSCP) field
@@ -621,9 +621,9 @@ pub struct Dscp {
 impl Dscp {
     /// Create a new [`Dscp`] instance. Note that the class and drop probably
     /// cannot be larger than 7, since they are represented using 3 bits each.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Fails when class or drop are larger than 7.
     #[inline]
     #[must_use]
@@ -776,7 +776,7 @@ impl From<Flags> for u8 {
 mod tests {
     use super::{Dscp, Ecn, Flags, Packet};
     use crate::ethernet::Frame;
-    use std::{error::Error, net::Ipv4Addr};
+    use std::{error::Error, net::Ipv4Addr, io::Cursor};
 
     // IPv4 packet wrapped in an Ethernet frame, captured using Wireshark.
     pub const FRAME_WITH_PACKET: &'static [u8] = include_bytes!("../resources/ethernet-ipv4.bin");
@@ -1038,12 +1038,16 @@ mod tests {
     #[test]
     fn packet_builder_has_expected_payload() -> Result<(), Box<dyn Error>> {
         let buf = &mut [0; Packet::MIN_HEADER_LEN as usize + 4];
+
         let payload = [1, 2, 3, 4];
+        let reader = Cursor::new(payload);
+
         let packet = Packet::builder(buf)?
             .header_len(5)
             .len(24)
-            .payload(payload, 0)
+            .payload(reader, 0)?
             .build();
+
         assert_eq!(packet.payload(), payload);
         Ok(())
     }

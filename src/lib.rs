@@ -54,6 +54,8 @@ pub enum Error {
     CannotParse(&'static str),
     #[error("not enough space: {0}")]
     NotEnoughSpace(&'static str),
+    #[error("io error: {0}")]
+    IoError(std::io::Error),
 }
 
 // Get a constant pointer to a T at an arbitrary byte offset in a byte array
