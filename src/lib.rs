@@ -2,13 +2,22 @@
 //!
 //! ## Performance
 //!
-//! This crate intends to be part of a zero-copy networking stack. It operates
-//! directly on byte slices, parsing fields on demand. Consumers only "pay" for
-//! parsing the fields they actually use, when they use it.
+//! This crate never allocates heap memory. It exclusively uses references to
+//! pre-allocated byte slices. This means it can read and write to the *exact*
+//! same buffers used by network devices, making it suitable as part of a
+//! zero-copy networking stack. Packet fields are only parsed and written when
+//! they're used, meaning that callers only pay for the protocol features they
+//! actually use.
 //!
-//! Packet fields are returned by value (i.e. copied) when they are shorter than
-//! 8 bytes long. Passing them by reference requires a pointer anyway, which is
-//! already 8 bytes long on a 64-bit system. The compiler optimises this anyway.
+//! The only "gotcha" is that the payload setter fields, like
+//! [`PacketBuilder::payload`](crate::ipv4::PacketBuilder::payload), accept a
+//! [`Read`](std::io::Read) parameter that is used to write bytes directly into
+//! the underlying packet buffer. It is the responsibility of the caller to make
+//! sure this [`Read`](std::io::Read) is efficient.
+//!
+//! Fields are returned by value (i.e. copied) when they are small, like an IPv4
+//! address. Passing them by reference requires a pointer anyway, which is
+//! already 8 bytes long on a 64-bit system.
 //!
 //! ## Safety
 //!
@@ -22,8 +31,8 @@
 //! But we cannot do this in safe-only Rust, because the type system does not
 //! allow us to extract constant-sized arrays from a slice at runtime. This is
 //! due to const generics being a compile-time-only feature, blocking the
-//! ability to use methods like [`u16::from_be_bytes`], and forces multiple
-//! runtime boundary checks.
+//! ability to use methods like [`u16::from_be_bytes`], forcing us to perform
+//! multiple runtime boundary checks to satisfy the type system.
 //!
 //! Instead, this crate uses `unsafe` to directly index the bytes and return
 //! primitive types. This interface is safe because the slice length is checked
@@ -56,6 +65,25 @@ pub enum Error {
     NotEnoughSpace(&'static str),
     #[error("io error: {0}")]
     IoError(std::io::Error),
+}
+
+// Read all the bytes from `src` into `dst`.
+//
+// # Errors
+//
+// Returns an error when [`Read`](std::io::Read) returns any error other
+// than [`ErrorKind::Interrupted`](std::io::ErrorKind::Interrupted).
+pub(crate) fn read_all_bytes<R: std::io::Read>(mut src: R, dst: &mut [u8]) -> Result<()> {
+    let mut read = 0;
+    while read < dst.len() {
+        match src.read(dst) {
+            Ok(0) => break,
+            Ok(n) => read += n,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(Error::IoError(e)),
+        }
+    }
+    Ok(())
 }
 
 // Get a constant pointer to a T at an arbitrary byte offset in a byte array
