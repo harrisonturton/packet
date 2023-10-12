@@ -1,4 +1,4 @@
-//! Ethernet MAC frame parsing.
+//! Read and write Ethernet MAC frames.
 //!
 //! ## Standards conformance
 //!
@@ -9,16 +9,16 @@
 //! delimiter (SFD) because those are layer 1 components. They're typically
 //! stripped by the NIC anyway, so they're not usually available. It also does
 //! not support extracting the frame check sequence (FCS) because it is often
-//! innacurate (or stripped) due to checksum offloading on the NIC.
+//! innacurate or stripped due to checksum offloading on the NIC.
 use crate::{offset_read, offset_write, Error, Result};
 use std::fmt::Debug;
 
 /// An Ethernet frame.
 ///
 /// This struct wraps a byte array directly. Nothing is parsed until the field
-/// accessor methods (e.g. [`dest`]) are called. Some header values are passed
-/// as copies when they're small, but client data (the payload) is always
-/// referred to by reference.
+/// accessor methods (e.g. [`Ethernet::dest`]) are called. Some header values
+/// are passed as copies when they're small, but client data (the payload) is
+/// always referred to by reference.
 ///
 /// See the module documentation for more information.
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
@@ -31,8 +31,8 @@ impl<'a> Frame<'a> {
     ///
     /// # Errors
     ///
-    /// Fails when the byte slice is smaller than the minimum
-    /// [`MIN_ETHERNET_FRAME`] size, but does not other validation.
+    /// Fails when the byte slice is smaller than the minimum size, but does no
+    /// other validation.
     ///
     /// The field accessor methods on [`Frame`] index directly into the byte
     /// array (an unsafe operation) so this length precondition needs to be
@@ -134,15 +134,17 @@ impl<'a> FrameBuilder<'a> {
     }
 
     /// Copy the payload into the buffer.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Fails when there is not enough space in the buffer for the payload.
     #[inline]
     #[must_use]
     pub fn payload(self, payload: &[u8]) -> Result<Self> {
         if self.bytes.len() - PAYLOAD_START < payload.len() {
-            return Err(Error::NotEnoughSpace("buffer not large enough to write payload"));
+            return Err(Error::NotEnoughSpace(
+                "buffer not large enough to write payload",
+            ));
         }
 
         unsafe { offset_write(self.bytes, PAYLOAD_START, payload) };
@@ -150,9 +152,9 @@ impl<'a> FrameBuilder<'a> {
     }
 
     /// Create the [`Frame`].
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Fails when [`Frame::new`] fails.
     #[inline]
     #[must_use]
