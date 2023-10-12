@@ -18,9 +18,9 @@ use std::fmt::Debug;
 /// An Ethernet frame.
 ///
 /// This struct wraps a byte array directly. Nothing is parsed until the field
-/// accessor methods (e.g. [`Ethernet::dest`]) are called. Some header values
-/// are passed as copies when they're small, but client data (the payload) is
-/// always referred to by reference.
+/// accessor methods (e.g. [`Frame::dest`]) are called. Some header values are
+/// passed as copies when they're small, but client data (the payload) is always
+/// referred to by reference.
 ///
 /// See the module documentation for more information.
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
