@@ -10,7 +10,9 @@
 //! stripped by the NIC anyway, so they're not usually available. It also does
 //! not support extracting the frame check sequence (FCS) because it is often
 //! innacurate or stripped due to checksum offloading on the NIC.
-use crate::{offset_read, offset_write, Error, Result};
+use byteorder::{NetworkEndian, ByteOrder};
+
+use crate::{Error, Result};
 use std::fmt::Debug;
 
 /// An Ethernet frame.
@@ -22,11 +24,11 @@ use std::fmt::Debug;
 ///
 /// See the module documentation for more information.
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct Frame<'a> {
-    bytes: &'a [u8],
+pub struct Frame<B: AsRef<[u8]>> {
+    buf: B,
 }
 
-impl<'a> Frame<'a> {
+impl<B: AsRef<[u8]>> Frame<B> {
     /// Create a new Ethernet frame.
     ///
     /// # Errors
@@ -39,9 +41,9 @@ impl<'a> Frame<'a> {
     /// enforced to ensure safety at runtime.
     #[inline]
     #[must_use]
-    pub fn new(bytes: &'a [u8]) -> Result<Frame<'a>> {
-        if bytes.len() >= MIN_FRAME_LEN {
-            Ok(Frame { bytes })
+    pub fn new(buf: B) -> Result<Self> {
+        if buf.as_ref().len() >= MIN_FRAME_LEN {
+            Ok(Self { buf })
         } else {
             Err(Error::CannotParse("frame too small"))
         }
@@ -50,22 +52,41 @@ impl<'a> Frame<'a> {
     /// Construct a new [`Frame`] using a [`FrameBuilder`].
     #[inline]
     #[must_use]
-    pub fn builder(bytes: &'a mut [u8]) -> FrameBuilder<'a> {
-        FrameBuilder::new(bytes)
+    pub fn builder<T>(buf: T) -> FrameBuilder<T>
+    where 
+        T: AsRef<[u8]> + AsMut<[u8]>
+    {
+        FrameBuilder::<T>::new(buf)
     }
 
     /// Extract the destination MAC address.
+    /// 
+    /// # Panics
+    /// 
+    /// Panics when there are not enough bytes to read the destination address.
+    /// This will never happen if the checked constructor [`Frame::new`] is
+    /// used.
     #[inline]
     #[must_use]
     pub fn dest(&self) -> MacAddr {
-        MacAddr::from(unsafe { offset_read::<[u8; 6]>(self.bytes, 0) })
+        let data = self.buf.as_ref();
+        let octets: [u8; 6] = data[offsets::DEST].try_into().unwrap();
+        MacAddr::from(octets)
     }
 
     /// Extract the source MAC address.
+    /// 
+    /// # Panics
+    /// 
+    /// Panics when there are not enough bytes to read the destination address.
+    /// This will never happen if the checked constructor [`Frame::new`] is
+    /// used.
     #[inline]
     #[must_use]
     pub fn source(&self) -> MacAddr {
-        MacAddr::from(unsafe { offset_read::<[u8; 6]>(self.bytes, 6) })
+        let data = self.buf.as_ref();
+        let octets: [u8; 6] = data[offsets::SOURCE].try_into().unwrap();
+        MacAddr::from(octets)
     }
 
     /// Extract the length/type field.
@@ -76,60 +97,66 @@ impl<'a> Frame<'a> {
     #[inline]
     #[must_use]
     pub fn length_type(&self) -> LengthType {
-        LengthType::new(u16::from_be_bytes(unsafe { offset_read(self.bytes, 12) }))
+        let data = self.buf.as_ref();
+        let field = NetworkEndian::read_u16(&data[offsets::LENGTH_TYPE]);
+        LengthType::new(field)
     }
 
     /// Extract the client data field.
     #[inline]
     #[must_use]
     pub fn payload(&self) -> &[u8] {
-        &self.bytes[PAYLOAD_START..]
+        let data = self.buf.as_ref();
+        &data[offsets::PAYLOAD]
     }
 
     /// Total length of the frame.
     #[inline]
     #[must_use]
     pub fn len(&self) -> usize {
-        self.bytes.len()
+        self.buf.as_ref().len()
     }
 }
 
 /// Builder for constructing [`Frame`] instances.
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub struct FrameBuilder<'a> {
-    bytes: &'a mut [u8],
+pub struct FrameBuilder<B: AsRef<[u8]> + AsMut<[u8]>> {
+    buf: B,
 }
 
-impl<'a> FrameBuilder<'a> {
+impl<B: AsRef<[u8]> + AsMut<[u8]>> FrameBuilder<B> {
     /// Create a new [`FrameBuilder`] instance from an underlying byte slice.
     #[inline]
     #[must_use]
-    pub fn new(bytes: &'a mut [u8]) -> Self {
-        Self { bytes }
+    pub fn new(buf: B) -> Self {
+        Self { buf }
     }
 
     /// Set the destination MAC address.
     #[inline]
     #[must_use]
-    pub fn dest(self, dest: MacAddr) -> Self {
-        unsafe { offset_write(self.bytes, 0, &dest.octets) };
+    pub fn dest(mut self, dest: MacAddr) -> Self {
+        let data = &mut self.buf.as_mut();
+        data[offsets::DEST].copy_from_slice(&dest.octets);
         self
     }
 
     /// Set the source MAC address.
     #[inline]
     #[must_use]
-    pub fn source(self, source: MacAddr) -> Self {
-        unsafe { offset_write(self.bytes, 6, &source.octets) };
+    pub fn source(mut self, source: MacAddr) -> Self {
+        let data = &mut self.buf.as_mut();
+        data[offsets::SOURCE].copy_from_slice(&source.octets);
         self
     }
 
     /// Set the "length/type" field as an [`EtherType`].
     #[inline]
     #[must_use]
-    pub fn ethertype(self, ethertype: EtherType) -> Self {
+    pub fn ethertype(mut self, ethertype: EtherType) -> Self {
+        let data = &mut self.buf.as_mut();
         let ethertype: u16 = ethertype.into();
-        unsafe { offset_write(self.bytes, 12, &ethertype.to_be_bytes()) };
+        NetworkEndian::write_u16(&mut data[offsets::LENGTH_TYPE], ethertype);
         self
     }
 
@@ -137,17 +164,22 @@ impl<'a> FrameBuilder<'a> {
     ///
     /// # Errors
     ///
-    /// Fails when there is not enough space in the buffer for the payload.
+    /// Fails when there is not enough space in the buffer for the payload, or
+    /// when when [`Read`](std::io::Read) returns any error other than
+    /// [`ErrorKind::Interrupted`](std::io::ErrorKind::Interrupted).
     #[inline]
     #[must_use]
-    pub fn payload(self, payload: &[u8]) -> Result<Self> {
-        if self.bytes.len() - PAYLOAD_START < payload.len() {
+    pub fn payload(mut self, payload: &[u8]) -> Result<Self> {
+        let data = self.buf.as_mut();
+        let payload_buf = &mut data[offsets::PAYLOAD];
+
+        if payload_buf.len() < payload.len() {
             return Err(Error::NotEnoughSpace(
                 "buffer not large enough to write payload",
             ));
         }
 
-        unsafe { offset_write(self.bytes, PAYLOAD_START, payload) };
+        crate::write_all_bytes(payload, payload_buf)?;
         Ok(self)
     }
 
@@ -158,9 +190,17 @@ impl<'a> FrameBuilder<'a> {
     /// Fails when [`Frame::new`] fails.
     #[inline]
     #[must_use]
-    pub fn build(self) -> Result<Frame<'a>> {
-        Frame::new(self.bytes)
+    pub fn build(self) -> Result<Frame<B>> {
+        Frame::new(self.buf)
     }
+}
+
+mod offsets {
+    use std::ops::{Range, RangeFrom};
+    pub(crate) const DEST: Range<usize> = 0..6;
+    pub(crate) const SOURCE: Range<usize> = 6..12;
+    pub(crate) const LENGTH_TYPE: Range<usize> = 12..14;
+    pub(crate) const PAYLOAD: RangeFrom<usize> = 14..;
 }
 
 /// The Ethernet header has a "length/type" field which represents either the
@@ -258,9 +298,6 @@ const ETHERTYPE_IPV4: u16 = 0x800;
 // EtherType code for IPv6.
 const ETHERTYPE_IPV6: u16 = 0x86DD;
 
-// Index where the header ends and client data begins
-const PAYLOAD_START: usize = 14;
-
 #[cfg(test)]
 mod tests {
     use super::{EtherType, Frame, LengthType, MacAddr, ETHERTYPE_IPV4, ETHERTYPE_IPV6};
@@ -315,7 +352,7 @@ mod tests {
     #[test]
     fn frame_builder_returns_expected_frame() -> Result<(), Box<dyn Error>> {
         let mut buf = [0; 1024];
-        let frame = Frame::builder(&mut buf)
+        let frame = Frame::<&[u8]>::builder(&mut buf)
             .source(MacAddr::new(0, 0, 0, 0, 0, 0))
             .dest(MacAddr::new(10, 10, 10, 10, 10, 10))
             .ethertype(EtherType::Ipv4)

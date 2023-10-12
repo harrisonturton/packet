@@ -394,7 +394,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
     pub fn payload<R: Read>(mut self, payload: R, options_len: usize) -> Result<Self> {
         let data = self.buf.as_mut();
         let start = usize::from(MIN_HEADER_LEN) + options_len;
-        crate::read_all_bytes(payload, &mut data[start..])?;
+        crate::write_all_bytes(payload, &mut data[start..])?;
         Ok(self)
     }
 

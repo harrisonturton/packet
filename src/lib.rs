@@ -67,13 +67,13 @@ pub enum Error {
     IoError(std::io::Error),
 }
 
-// Read all the bytes from `src` into `dst`.
+// Read all the bytes from `src` and write them into `dst`.
 //
 // # Errors
 //
 // Returns an error when [`Read`](std::io::Read) returns any error other
 // than [`ErrorKind::Interrupted`](std::io::ErrorKind::Interrupted).
-pub(crate) fn read_all_bytes<R: std::io::Read>(mut src: R, dst: &mut [u8]) -> Result<()> {
+pub(crate) fn write_all_bytes<R: std::io::Read>(mut src: R, dst: &mut [u8]) -> Result<()> {
     let mut read = 0;
     while read < dst.len() {
         match src.read(dst) {
@@ -84,20 +84,6 @@ pub(crate) fn read_all_bytes<R: std::io::Read>(mut src: R, dst: &mut [u8]) -> Re
         }
     }
     Ok(())
-}
-
-// Read a value of type T at an arbitrary byte offset from a byte array.
-#[inline]
-#[must_use]
-pub(crate) unsafe fn offset_read<T>(source: &[u8], offset: isize) -> T {
-    (source.as_ptr().offset(offset) as *mut T).read()
-}
-
-// Write a value of type T at an arbitrary byte offset from a byte array. This
-// copies the bytes from `value` into `dest`.
-#[inline]
-pub(crate) unsafe fn offset_write(dest: &mut [u8], offset: usize, value: &[u8]) {
-    dest[offset..offset + value.len()].copy_from_slice(value);
 }
 
 // Check if the nth bit is set
@@ -116,21 +102,7 @@ pub(crate) fn setbits(a: u8, b: u8, mask: u8) -> u8 {
 
 #[cfg(test)]
 mod tests {
-    use super::{bitset, offset_read, offset_write, setbits};
-
-    #[test]
-    fn offset_read_returns_expected_value() {
-        let bytes = &[0, 0xFF, 0xF, 0, 0];
-        assert_eq!(unsafe { offset_read::<u16>(bytes, 1) }, 0xFFF);
-    }
-
-    #[test]
-    fn offset_write_performs_expected_mutation() -> Result<(), Box<dyn std::error::Error>> {
-        let bytes = &mut [0, 0, 0, 0, 0];
-        unsafe { offset_write(bytes, 1, &[0xA, 0xB]) };
-        assert_eq!(&[0, 0xA, 0xB, 0, 0], bytes);
-        Ok(())
-    }
+    use super::{bitset, setbits};
 
     #[test]
     fn bitset_returns_expected_value() {
