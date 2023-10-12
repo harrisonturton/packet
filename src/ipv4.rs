@@ -1,14 +1,12 @@
-//! IPv4 packet parsing.
+//! Read and write IPv4 packets.
 //!
 //! ## Standards conformance
 //!
-//! This implementation follows the [RFC
+//! This implementation uses the modern DSCP and ECN interpretation of the
+//! type-of-service field. Specifically, it follows the [RFC
 //! 791](https://datatracker.ietf.org/doc/html/rfc791) format as refined by [RFC
 //! 2474](https://datatracker.ietf.org/doc/html/rfc2474) and [RFC
 //! 3168](https://datatracker.ietf.org/doc/html/rfc3168).
-//!
-//! Specifically, it re-interpret the original type-of-service field as the
-//! modern DSCP and ECN replacements.
 //!
 //! 1. [Internet protocol (RFC 791)](https://datatracker.ietf.org/doc/html/rfc791)
 //! 2. [Definition of the Differentiated Services Field (DS Field) in the IPv4 and IPv6 Headers (RFC 2474)](https://datatracker.ietf.org/doc/html/rfc2474)
@@ -19,7 +17,7 @@ use std::{io::Read, mem::size_of, net::Ipv4Addr};
 /// An IPv4 packet.
 ///
 /// This struct wraps a byte slice directly. Nothing is parsed until the field
-/// accessor methods are called, like [`Packet::dest`]). Some header values are
+/// accessor methods are called, like [`Packet::dest`]. Some header values are
 /// passed as copies when they're small, but the payload is always referred to
 /// by reference.
 ///
@@ -94,7 +92,7 @@ impl<'a> Packet<'a> {
         }
     }
 
-    /// Extract the differentiate service code point (DSCP).
+    /// Extract the differentiated service code point (DSCP).
     #[inline]
     #[must_use]
     pub fn dscp(&self) -> Dscp {
@@ -388,25 +386,16 @@ impl<'a> PacketBuilder<'a> {
     }
 
     /// Set the payload.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when [`Read`](std::io::Read) returns any error other
+    /// than [`ErrorKind::Interrupted`](std::io::ErrorKind::Interrupted).
     #[inline]
     #[must_use]
-    pub fn payload<R>(self, mut payload: R, options_len: usize) -> Result<Self>
-    where
-        R: Read,
-    {
+    pub fn payload<R: Read>(self, payload: R, options_len: usize) -> Result<Self> {
         let start = usize::from(Packet::MIN_HEADER_LEN) + options_len;
-        let buf = &mut self.bytes[start..];
-
-        let mut read = 0;
-        while read < buf.len() {
-            match payload.read(buf) {
-                Ok(0) => break,
-                Ok(n) => read += n,
-                Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
-                Err(e) => return Err(Error::IoError(e)),
-            };
-        }
-
+        crate::read_all_bytes(payload, &mut self.bytes[start..])?;
         Ok(self)
     }
 
@@ -610,8 +599,8 @@ mod offsets {
     }
 }
 
-/// Strongly-typed wrapper for "differentiated service code point" (DSCP) field
-/// in the IP packet.
+/// Wrapper for "differentiated service code point" (DSCP) field in the IP
+/// packet.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct Dscp {
     class: u8,
@@ -715,7 +704,7 @@ impl From<Ecn> for u8 {
     }
 }
 
-/// Strongly typed wrapper for the "flags" field on the IP packet.
+/// Wrapper for the "flags" field on the IP packet.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct Flags {
     do_not_fragment: bool,
@@ -776,7 +765,7 @@ impl From<Flags> for u8 {
 mod tests {
     use super::{Dscp, Ecn, Flags, Packet};
     use crate::ethernet::Frame;
-    use std::{error::Error, net::Ipv4Addr, io::Cursor};
+    use std::{error::Error, io::Cursor, net::Ipv4Addr};
 
     // IPv4 packet wrapped in an Ethernet frame, captured using Wireshark.
     pub const FRAME_WITH_PACKET: &'static [u8] = include_bytes!("../resources/ethernet-ipv4.bin");
@@ -1038,7 +1027,6 @@ mod tests {
     #[test]
     fn packet_builder_has_expected_payload() -> Result<(), Box<dyn Error>> {
         let buf = &mut [0; Packet::MIN_HEADER_LEN as usize + 4];
-
         let payload = [1, 2, 3, 4];
         let reader = Cursor::new(payload);
 
