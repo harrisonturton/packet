@@ -181,7 +181,8 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> DatagramBuilder<B> {
     }
 }
 
-pub const MIN_DATAGRAM_LEN: usize = 8;
+// Minimum length of a UDP datagram.
+pub(crate) const MIN_DATAGRAM_LEN: usize = 8;
 
 mod offsets {
     use std::ops::{Range, RangeFrom};

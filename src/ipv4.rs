@@ -11,9 +11,8 @@
 //! 1. [Internet protocol (RFC 791)](https://datatracker.ietf.org/doc/html/rfc791)
 //! 2. [Definition of the Differentiated Services Field (DS Field) in the IPv4 and IPv6 Headers (RFC 2474)](https://datatracker.ietf.org/doc/html/rfc2474)
 //! 3. [The Addition of Explicit Network Congestion Notification (ECN) to IP (RFC 3168)](https://datatracker.ietf.org/doc/html/rfc3168)
-use byteorder::{ByteOrder, NetworkEndian};
-
 use crate::{bitset, setbits, Error, Result};
+use byteorder::{ByteOrder, NetworkEndian};
 use std::{io::Read, mem::size_of, net::Ipv4Addr};
 
 /// An IPv4 packet.
@@ -168,9 +167,9 @@ impl<B: AsRef<[u8]>> Packet<B> {
     }
 
     /// Extract the source address.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if there are not enough bytes to fulfil the read.
     #[inline]
     #[must_use]
@@ -181,9 +180,9 @@ impl<B: AsRef<[u8]>> Packet<B> {
     }
 
     /// Extract the destination address.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if there are not enough bytes to fulfil the read.
     #[inline]
     #[must_use]

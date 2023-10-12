@@ -10,7 +10,7 @@
 //! stripped by the NIC anyway, so they're not usually available. It also does
 //! not support extracting the frame check sequence (FCS) because it is often
 //! innacurate or stripped due to checksum offloading on the NIC.
-use byteorder::{NetworkEndian, ByteOrder};
+use byteorder::{ByteOrder, NetworkEndian};
 
 use crate::{Error, Result};
 use std::fmt::Debug;
@@ -53,16 +53,16 @@ impl<B: AsRef<[u8]>> Frame<B> {
     #[inline]
     #[must_use]
     pub fn builder<T>(buf: T) -> FrameBuilder<T>
-    where 
-        T: AsRef<[u8]> + AsMut<[u8]>
+    where
+        T: AsRef<[u8]> + AsMut<[u8]>,
     {
         FrameBuilder::<T>::new(buf)
     }
 
     /// Extract the destination MAC address.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics when there are not enough bytes to read the destination address.
     /// This will never happen if the checked constructor [`Frame::new`] is
     /// used.
@@ -75,9 +75,9 @@ impl<B: AsRef<[u8]>> Frame<B> {
     }
 
     /// Extract the source MAC address.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics when there are not enough bytes to read the destination address.
     /// This will never happen if the checked constructor [`Frame::new`] is
     /// used.
