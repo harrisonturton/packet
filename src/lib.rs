@@ -19,26 +19,6 @@
 //! address. Passing them by reference requires a pointer anyway, which is
 //! already 8 bytes long on a 64-bit system.
 //!
-//! ## Safety
-//!
-//! Consuming the slice on-demand creates a problem with Rust's existing type
-//! system. There are many cases where values need to be pulled out of this byte
-//! slice that are known to exist, but this cannot be verified at compile time.
-//! For example, it's clear that if the byte slice is longer than the minimum
-//! header size of an IPv4 packet (20 bytes) it is memory safe to parse the
-//! bytes at offset `2..4` into a `u16` field.
-//!
-//! But we cannot do this in safe-only Rust, because the type system does not
-//! allow us to extract constant-sized arrays from a slice at runtime. This is
-//! due to const generics being a compile-time-only feature, blocking the
-//! ability to use methods like [`u16::from_be_bytes`], forcing us to perform
-//! multiple runtime boundary checks to satisfy the type system.
-//!
-//! Instead, this crate uses `unsafe` to directly index the bytes and return
-//! primitive types. This interface is safe because the slice length is checked
-//! when each type is constructed, which guarantees that the memory accesses are
-//! valid.
-//!
 //! This gives us the following benefits:
 //!
 //! * Removes redundant runtime checks, because only one check is needed in the constructor
