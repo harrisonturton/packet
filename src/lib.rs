@@ -86,20 +86,6 @@ pub(crate) fn read_all_bytes<R: std::io::Read>(mut src: R, dst: &mut [u8]) -> Re
     Ok(())
 }
 
-// Get a constant pointer to a T at an arbitrary byte offset in a byte array
-#[inline]
-#[must_use]
-pub(crate) unsafe fn offset_ptr<T>(source: &[u8], offset: isize) -> *const T {
-    source.as_ptr().offset(offset).cast()
-}
-
-// Get a mutable pointer to a T at an arbitrary byte offset in a byte array
-#[inline]
-#[must_use]
-pub(crate) unsafe fn offset_mut_ptr<T>(source: &mut [u8], offset: isize) -> *mut T {
-    source.as_mut_ptr().offset(offset).cast()
-}
-
 // Read a value of type T at an arbitrary byte offset from a byte array.
 #[inline]
 #[must_use]
@@ -112,12 +98,6 @@ pub(crate) unsafe fn offset_read<T>(source: &[u8], offset: isize) -> T {
 #[inline]
 pub(crate) unsafe fn offset_write(dest: &mut [u8], offset: usize, value: &[u8]) {
     dest[offset..offset + value.len()].copy_from_slice(value);
-}
-
-// Write a byte slice to a raw byte array.
-#[inline]
-pub(crate) unsafe fn ptr_write<T, K: AsRef<[u8]>>(dst: *mut T, src: K) {
-    std::ptr::copy_nonoverlapping(src.as_ref().as_ptr(), dst.cast(), src.as_ref().len());
 }
 
 // Check if the nth bit is set
