@@ -13,5 +13,6 @@ meaning that callers only pay for the protocol features they actually use.
 - [x] Ethernet frames
 - [X] IP packets
 - [X] UDP packets
+- [X] ARP packets
 - [ ] TCP packets
 - [ ] QUIC packets
