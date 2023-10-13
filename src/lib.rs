@@ -29,6 +29,7 @@
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::len_without_is_empty)]
 
+pub mod arp;
 pub mod ethernet;
 pub mod ipv4;
 pub mod udp;

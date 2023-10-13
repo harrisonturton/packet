@@ -1,0 +1,300 @@
+[
+  {
+    "_index": "packets-2023-10-13",
+    "_type": "doc",
+    "_score": null,
+    "_source": {
+      "layers": {
+        "frame": {
+          "frame.section_number": "1",
+          "frame.interface_id": "0",
+          "frame.interface_id_tree": {
+            "frame.interface_name": "en0",
+            "frame.interface_description": "Wi-Fi"
+          },
+          "frame.encap_type": "1",
+          "frame.time": "Oct 13, 2023 16:41:21.328895000 AEDT",
+          "frame.offset_shift": "0.000000000",
+          "frame.time_epoch": "1697175681.328895000",
+          "frame.time_delta": "0.037829000",
+          "frame.time_delta_displayed": "0.000000000",
+          "frame.time_relative": "6.387057000",
+          "frame.number": "206",
+          "frame.len": "60",
+          "frame.cap_len": "60",
+          "frame.marked": "0",
+          "frame.ignored": "0",
+          "frame.protocols": "eth:ethertype:arp",
+          "frame.coloring_rule.name": "ARP",
+          "frame.coloring_rule.string": "arp"
+        },
+        "eth": {
+          "eth.dst": "bc:d0:74:0d:9c:12",
+          "eth.dst_tree": {
+            "eth.dst_resolved": "Apple_0d:9c:12",
+            "eth.dst.oui": "12374132",
+            "eth.dst.oui_resolved": "Apple, Inc.",
+            "eth.addr": "bc:d0:74:0d:9c:12",
+            "eth.addr_resolved": "Apple_0d:9c:12",
+            "eth.addr.oui": "12374132",
+            "eth.addr.oui_resolved": "Apple, Inc.",
+            "eth.dst.lg": "0",
+            "eth.lg": "0",
+            "eth.dst.ig": "0",
+            "eth.ig": "0"
+          },
+          "eth.src": "ac:17:c8:cc:96:af",
+          "eth.src_tree": {
+            "eth.src_resolved": "CiscoMer_cc:96:af",
+            "eth.src.oui": "11278280",
+            "eth.src.oui_resolved": "Cisco Meraki",
+            "eth.addr": "ac:17:c8:cc:96:af",
+            "eth.addr_resolved": "CiscoMer_cc:96:af",
+            "eth.addr.oui": "11278280",
+            "eth.addr.oui_resolved": "Cisco Meraki",
+            "eth.src.lg": "0",
+            "eth.lg": "0",
+            "eth.src.ig": "0",
+            "eth.ig": "0"
+          },
+          "eth.type": "0x0806",
+          "eth.padding": "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
+        },
+        "arp": {
+          "arp.hw.type": "1",
+          "arp.proto.type": "0x0800",
+          "arp.hw.size": "6",
+          "arp.proto.size": "4",
+          "arp.opcode": "1",
+          "arp.src.hw_mac": "ac:17:c8:cc:96:af",
+          "arp.src.proto_ipv4": "10.0.48.1",
+          "arp.dst.hw_mac": "00:00:00:00:00:00",
+          "arp.dst.proto_ipv4": "10.0.53.7"
+        }
+      }
+    }
+  },
+  {
+    "_index": "packets-2023-10-13",
+    "_type": "doc",
+    "_score": null,
+    "_source": {
+      "layers": {
+        "frame": {
+          "frame.section_number": "1",
+          "frame.interface_id": "0",
+          "frame.interface_id_tree": {
+            "frame.interface_name": "en0",
+            "frame.interface_description": "Wi-Fi"
+          },
+          "frame.encap_type": "1",
+          "frame.time": "Oct 13, 2023 16:41:21.329078000 AEDT",
+          "frame.offset_shift": "0.000000000",
+          "frame.time_epoch": "1697175681.329078000",
+          "frame.time_delta": "0.000183000",
+          "frame.time_delta_displayed": "0.000183000",
+          "frame.time_relative": "6.387240000",
+          "frame.number": "207",
+          "frame.len": "42",
+          "frame.cap_len": "42",
+          "frame.marked": "0",
+          "frame.ignored": "0",
+          "frame.protocols": "eth:ethertype:arp",
+          "frame.coloring_rule.name": "ARP",
+          "frame.coloring_rule.string": "arp"
+        },
+        "eth": {
+          "eth.dst": "ac:17:c8:cc:96:af",
+          "eth.dst_tree": {
+            "eth.dst_resolved": "CiscoMer_cc:96:af",
+            "eth.dst.oui": "11278280",
+            "eth.dst.oui_resolved": "Cisco Meraki",
+            "eth.addr": "ac:17:c8:cc:96:af",
+            "eth.addr_resolved": "CiscoMer_cc:96:af",
+            "eth.addr.oui": "11278280",
+            "eth.addr.oui_resolved": "Cisco Meraki",
+            "eth.dst.lg": "0",
+            "eth.lg": "0",
+            "eth.dst.ig": "0",
+            "eth.ig": "0"
+          },
+          "eth.src": "bc:d0:74:0d:9c:12",
+          "eth.src_tree": {
+            "eth.src_resolved": "Apple_0d:9c:12",
+            "eth.src.oui": "12374132",
+            "eth.src.oui_resolved": "Apple, Inc.",
+            "eth.addr": "bc:d0:74:0d:9c:12",
+            "eth.addr_resolved": "Apple_0d:9c:12",
+            "eth.addr.oui": "12374132",
+            "eth.addr.oui_resolved": "Apple, Inc.",
+            "eth.src.lg": "0",
+            "eth.lg": "0",
+            "eth.src.ig": "0",
+            "eth.ig": "0"
+          },
+          "eth.type": "0x0806"
+        },
+        "arp": {
+          "arp.hw.type": "1",
+          "arp.proto.type": "0x0800",
+          "arp.hw.size": "6",
+          "arp.proto.size": "4",
+          "arp.opcode": "2",
+          "arp.src.hw_mac": "bc:d0:74:0d:9c:12",
+          "arp.src.proto_ipv4": "10.0.53.7",
+          "arp.dst.hw_mac": "ac:17:c8:cc:96:af",
+          "arp.dst.proto_ipv4": "10.0.48.1"
+        }
+      }
+    }
+  },
+  {
+    "_index": "packets-2023-10-13",
+    "_type": "doc",
+    "_score": null,
+    "_source": {
+      "layers": {
+        "frame": {
+          "frame.section_number": "1",
+          "frame.interface_id": "0",
+          "frame.interface_id_tree": {
+            "frame.interface_name": "en0",
+            "frame.interface_description": "Wi-Fi"
+          },
+          "frame.encap_type": "1",
+          "frame.time": "Oct 13, 2023 16:41:36.331667000 AEDT",
+          "frame.offset_shift": "0.000000000",
+          "frame.time_epoch": "1697175696.331667000",
+          "frame.time_delta": "0.038047000",
+          "frame.time_delta_displayed": "15.002589000",
+          "frame.time_relative": "21.389829000",
+          "frame.number": "4116",
+          "frame.len": "60",
+          "frame.cap_len": "60",
+          "frame.marked": "0",
+          "frame.ignored": "0",
+          "frame.protocols": "eth:ethertype:arp",
+          "frame.coloring_rule.name": "ARP",
+          "frame.coloring_rule.string": "arp"
+        },
+        "eth": {
+          "eth.dst": "bc:d0:74:0d:9c:12",
+          "eth.dst_tree": {
+            "eth.dst_resolved": "Apple_0d:9c:12",
+            "eth.dst.oui": "12374132",
+            "eth.dst.oui_resolved": "Apple, Inc.",
+            "eth.addr": "bc:d0:74:0d:9c:12",
+            "eth.addr_resolved": "Apple_0d:9c:12",
+            "eth.addr.oui": "12374132",
+            "eth.addr.oui_resolved": "Apple, Inc.",
+            "eth.dst.lg": "0",
+            "eth.lg": "0",
+            "eth.dst.ig": "0",
+            "eth.ig": "0"
+          },
+          "eth.src": "ac:17:c8:cc:96:af",
+          "eth.src_tree": {
+            "eth.src_resolved": "CiscoMer_cc:96:af",
+            "eth.src.oui": "11278280",
+            "eth.src.oui_resolved": "Cisco Meraki",
+            "eth.addr": "ac:17:c8:cc:96:af",
+            "eth.addr_resolved": "CiscoMer_cc:96:af",
+            "eth.addr.oui": "11278280",
+            "eth.addr.oui_resolved": "Cisco Meraki",
+            "eth.src.lg": "0",
+            "eth.lg": "0",
+            "eth.src.ig": "0",
+            "eth.ig": "0"
+          },
+          "eth.type": "0x0806",
+          "eth.padding": "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
+        },
+        "arp": {
+          "arp.hw.type": "1",
+          "arp.proto.type": "0x0800",
+          "arp.hw.size": "6",
+          "arp.proto.size": "4",
+          "arp.opcode": "1",
+          "arp.src.hw_mac": "ac:17:c8:cc:96:af",
+          "arp.src.proto_ipv4": "10.0.48.1",
+          "arp.dst.hw_mac": "00:00:00:00:00:00",
+          "arp.dst.proto_ipv4": "10.0.53.7"
+        }
+      }
+    }
+  },
+  {
+    "_index": "packets-2023-10-13",
+    "_type": "doc",
+    "_score": null,
+    "_source": {
+      "layers": {
+        "frame": {
+          "frame.section_number": "1",
+          "frame.interface_id": "0",
+          "frame.interface_id_tree": {
+            "frame.interface_name": "en0",
+            "frame.interface_description": "Wi-Fi"
+          },
+          "frame.encap_type": "1",
+          "frame.time": "Oct 13, 2023 16:41:36.331744000 AEDT",
+          "frame.offset_shift": "0.000000000",
+          "frame.time_epoch": "1697175696.331744000",
+          "frame.time_delta": "0.000077000",
+          "frame.time_delta_displayed": "0.000077000",
+          "frame.time_relative": "21.389906000",
+          "frame.number": "4117",
+          "frame.len": "42",
+          "frame.cap_len": "42",
+          "frame.marked": "0",
+          "frame.ignored": "0",
+          "frame.protocols": "eth:ethertype:arp",
+          "frame.coloring_rule.name": "ARP",
+          "frame.coloring_rule.string": "arp"
+        },
+        "eth": {
+          "eth.dst": "ac:17:c8:cc:96:af",
+          "eth.dst_tree": {
+            "eth.dst_resolved": "CiscoMer_cc:96:af",
+            "eth.dst.oui": "11278280",
+            "eth.dst.oui_resolved": "Cisco Meraki",
+            "eth.addr": "ac:17:c8:cc:96:af",
+            "eth.addr_resolved": "CiscoMer_cc:96:af",
+            "eth.addr.oui": "11278280",
+            "eth.addr.oui_resolved": "Cisco Meraki",
+            "eth.dst.lg": "0",
+            "eth.lg": "0",
+            "eth.dst.ig": "0",
+            "eth.ig": "0"
+          },
+          "eth.src": "bc:d0:74:0d:9c:12",
+          "eth.src_tree": {
+            "eth.src_resolved": "Apple_0d:9c:12",
+            "eth.src.oui": "12374132",
+            "eth.src.oui_resolved": "Apple, Inc.",
+            "eth.addr": "bc:d0:74:0d:9c:12",
+            "eth.addr_resolved": "Apple_0d:9c:12",
+            "eth.addr.oui": "12374132",
+            "eth.addr.oui_resolved": "Apple, Inc.",
+            "eth.src.lg": "0",
+            "eth.lg": "0",
+            "eth.src.ig": "0",
+            "eth.ig": "0"
+          },
+          "eth.type": "0x0806"
+        },
+        "arp": {
+          "arp.hw.type": "1",
+          "arp.proto.type": "0x0800",
+          "arp.hw.size": "6",
+          "arp.proto.size": "4",
+          "arp.opcode": "2",
+          "arp.src.hw_mac": "bc:d0:74:0d:9c:12",
+          "arp.src.proto_ipv4": "10.0.53.7",
+          "arp.dst.hw_mac": "ac:17:c8:cc:96:af",
+          "arp.dst.proto_ipv4": "10.0.48.1"
+        }
+      }
+    }
+  }
+]

@@ -45,7 +45,7 @@ impl<B: AsRef<[u8]>> Frame<B> {
         if buf.as_ref().len() >= MIN_FRAME_LEN {
             Ok(Self { buf })
         } else {
-            Err(Error::CannotParse("frame too small"))
+            Err(Error::CannotParse("buffer too small"))
         }
     }
 
@@ -219,11 +219,8 @@ impl LengthType {
     #[must_use]
     pub fn new(value: u16) -> Self {
         match value {
-            ETHERTYPE_ARP => LengthType::Type(EtherType::Arp),
-            ETHERTYPE_IPV4 => LengthType::Type(EtherType::Ipv4),
-            ETHERTYPE_IPV6 => LengthType::Type(EtherType::Ipv6),
             len if len <= MAX_LENTYPE_LEN => LengthType::Length(len),
-            typ if typ >= MIN_LENTYPE_TYP => LengthType::Type(EtherType::Unknown(typ)),
+            typ if typ >= MIN_LENTYPE_ETHERTYPE => LengthType::Type(value.into()),
             _ => LengthType::Invalid(value),
         }
     }
@@ -246,6 +243,17 @@ impl From<EtherType> for u16 {
             EtherType::Ipv4 => ETHERTYPE_IPV4,
             EtherType::Ipv6 => ETHERTYPE_IPV6,
             EtherType::Unknown(typ) => typ,
+        }
+    }
+}
+
+impl From<u16> for EtherType {
+    fn from(value: u16) -> Self {
+        match value {
+            ETHERTYPE_ARP => EtherType::Arp,
+            ETHERTYPE_IPV4 => EtherType::Ipv4,
+            ETHERTYPE_IPV6 => EtherType::Ipv6,
+            _ => EtherType::Unknown(value),
         }
     }
 }
@@ -286,14 +294,14 @@ impl ToString for MacAddr {
     }
 }
 
-// Minimum length of an Ethernet frame.
-const MIN_FRAME_LEN: usize = 64;
+// Ethernet MAC frame header length
+const MIN_FRAME_LEN: usize = 14;
 
 // When the length/type field is below this value it is considered a length.
 const MAX_LENTYPE_LEN: u16 = 0x5DC;
 
 // When the length/type field is above this value it is considered an [`EtherType`].
-const MIN_LENTYPE_TYP: u16 = 0x600;
+const MIN_LENTYPE_ETHERTYPE: u16 = 0x600;
 
 // EtherType code for IPv4.
 const ETHERTYPE_IPV4: u16 = 0x800;
@@ -312,7 +320,7 @@ mod tests {
     use std::error::Error;
 
     // IP packet wrapped in an Ethernet frame, captured using Wireshark.
-    pub const FRAME: &'static [u8] = include_bytes!("../resources/ethernet-frame.bin");
+    pub const FRAME: &'static [u8] = include_bytes!("../resources/enet-frame.bin");
 
     #[test]
     fn frame_returns_err_when_byte_slice_too_short() {

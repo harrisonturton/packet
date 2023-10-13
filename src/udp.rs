@@ -200,7 +200,7 @@ mod tests {
     use std::{error::Error, io::Cursor};
 
     // IPv4 packet wrapped in an Ethernet frame, captured using Wireshark.
-    pub const ETH_IPV4_UDP: &'static [u8] = include_bytes!("../resources/ethernet-ipv4.bin");
+    pub const ETH_IPV4_UDP: &'static [u8] = include_bytes!("../resources/enet-ipv4.bin");
 
     #[test]
     fn datagram_returns_err_when_byte_slice_too_short() {

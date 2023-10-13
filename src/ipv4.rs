@@ -11,8 +11,9 @@
 //! 1. [Internet protocol (RFC 791)](https://datatracker.ietf.org/doc/html/rfc791)
 //! 2. [Definition of the Differentiated Services Field (DS Field) in the IPv4 and IPv6 Headers (RFC 2474)](https://datatracker.ietf.org/doc/html/rfc2474)
 //! 3. [The Addition of Explicit Network Congestion Notification (ECN) to IP (RFC 3168)](https://datatracker.ietf.org/doc/html/rfc3168)
-use crate::{bitset, setbits, Error, Result};
 use byteorder::{ByteOrder, NetworkEndian};
+
+use crate::{bitset, setbits, Error, Result};
 use std::{io::Read, mem::size_of, net::Ipv4Addr};
 
 /// An IPv4 packet.
@@ -80,7 +81,8 @@ impl<B: AsRef<[u8]>> Packet<B> {
     #[inline]
     #[must_use]
     pub fn version(&self) -> u8 {
-        self.buf.as_ref()[offsets::VERSION] >> 4
+        let data = self.buf.as_ref();
+        data[offsets::VERSION] >> 4
     }
 
     /// Length of the header in bytes. This is different from the raw field
@@ -597,17 +599,16 @@ mod tests {
     use std::{error::Error, io::Cursor, net::Ipv4Addr};
 
     // IPv4 packet wrapped in an Ethernet frame, captured using Wireshark.
-    pub const FRAME_WITH_PACKET: &'static [u8] = include_bytes!("../resources/ethernet-ipv4.bin");
+    const FRAME_WITH_PACKET: &'static [u8] = include_bytes!("../resources/enet-ipv4.bin");
 
     // IPv4 with junk options created using scapy
-    pub const PACKET_WITH_OPTS: &'static [u8] = include_bytes!("../resources/ipv4-with-opts.bin");
+    const PACKET_WITH_OPTS: &'static [u8] = include_bytes!("../resources/ipv4-with-opts.bin");
 
     #[test]
-    fn packet_returns_err_when_byte_slice_too_short() -> Result<(), Box<dyn Error>> {
+    fn packet_returns_err_when_byte_slice_too_short() {
         let frame = vec![0, 0, 0, 0];
         let packet = Packet::new(&frame);
         assert!(packet.is_err());
-        Ok(())
     }
 
     #[test]
