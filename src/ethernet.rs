@@ -219,6 +219,7 @@ impl LengthType {
     #[must_use]
     pub fn new(value: u16) -> Self {
         match value {
+            ETHERTYPE_ARP => LengthType::Type(EtherType::Arp),
             ETHERTYPE_IPV4 => LengthType::Type(EtherType::Ipv4),
             ETHERTYPE_IPV6 => LengthType::Type(EtherType::Ipv6),
             len if len <= MAX_LENTYPE_LEN => LengthType::Length(len),
@@ -232,6 +233,7 @@ impl LengthType {
 /// values](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml#ieee-802-numbers-1).
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum EtherType {
+    Arp,
     Ipv4,
     Ipv6,
     Unknown(u16),
@@ -240,6 +242,7 @@ pub enum EtherType {
 impl From<EtherType> for u16 {
     fn from(value: EtherType) -> Self {
         match value {
+            EtherType::Arp => ETHERTYPE_ARP,
             EtherType::Ipv4 => ETHERTYPE_IPV4,
             EtherType::Ipv6 => ETHERTYPE_IPV6,
             EtherType::Unknown(typ) => typ,
@@ -295,11 +298,16 @@ const MIN_LENTYPE_TYP: u16 = 0x600;
 // EtherType code for IPv4.
 const ETHERTYPE_IPV4: u16 = 0x800;
 
+// EtherType code for ARP.
+const ETHERTYPE_ARP: u16 = 0x806;
+
 // EtherType code for IPv6.
 const ETHERTYPE_IPV6: u16 = 0x86DD;
 
 #[cfg(test)]
 mod tests {
+    use crate::ethernet::ETHERTYPE_ARP;
+
     use super::{EtherType, Frame, LengthType, MacAddr, ETHERTYPE_IPV4, ETHERTYPE_IPV6};
     use std::error::Error;
 
@@ -378,6 +386,13 @@ mod tests {
     fn length_type_has_expected_value_when_ipv4() {
         let actual = LengthType::new(ETHERTYPE_IPV4);
         let expected = LengthType::Type(EtherType::Ipv4);
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn length_type_has_expected_value_when_arp() {
+        let actual = LengthType::new(ETHERTYPE_ARP);
+        let expected = LengthType::Type(EtherType::Arp);
         assert_eq!(actual, expected);
     }
 
