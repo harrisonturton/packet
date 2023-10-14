@@ -169,28 +169,34 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> SegmentBuilder<B> {
     #[inline]
     #[must_use]
     pub fn flags(mut self, flags: Flags) {
-        unimplemented!()
+        let data = self.buf.as_mut();
+        let flags: u8 = flags.into();
+        let current = data[offsets::FLAGS];
+        data[offsets::FLAGS] = setbits(current, flags, 0b1111);
     }
 
     /// Set the window.
     #[inline]
     #[must_use]
     pub fn window(mut self, window: u16) {
-        unimplemented!()
+        let data = self.buf.as_mut();
+        NetworkEndian::write_u16(&mut data[offsets::WINDOW], window);
     }
 
     /// Set the checksum.
     #[inline]
     #[must_use]
     pub fn checksum(mut self, checksum: u16) {
-        unimplemented!()
+        let data = self.buf.as_mut();
+        NetworkEndian::write_u16(&mut data[offsets::CHECKSUM], checksum);
     }
 
     /// Set the urgent pointer.
     #[inline]
     #[must_use]
     pub fn urgent(mut self, urgent: u16) {
-        unimplemented!()
+        let data = self.buf.as_mut();
+        NetworkEndian::write_u16(&mut data[offsets::URGENT], urgent);
     }
 }
 
@@ -290,6 +296,19 @@ impl From<u8> for Flags {
             syn: bitset(value, 1),
             fin: bitset(value, 0),
         }
+    }
+}
+
+impl From<Flags> for u8 {
+    fn from(value: Flags) -> Self {
+        (value.cwr as u8) << 7
+            | (value.ece as u8) << 6
+            | (value.urg as u8) << 5
+            | (value.ack as u8) << 4
+            | (value.psh as u8) << 3
+            | (value.rst as u8) << 2
+            | (value.syn as u8) << 1
+            | value.fin as u8
     }
 }
 
