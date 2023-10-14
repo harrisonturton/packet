@@ -14,5 +14,6 @@ meaning that callers only pay for the protocol features they actually use.
 - [X] IP packets
 - [X] UDP packets
 - [X] ARP packets
-- [ ] TCP packets
+- [ ] ICMP packets (Partially done)
+- [ ] TCP segments (Partially done)
 - [ ] QUIC packets
