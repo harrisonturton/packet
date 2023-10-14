@@ -595,7 +595,7 @@ impl From<Flags> for u8 {
 #[cfg(test)]
 mod tests {
     use super::{Dscp, Ecn, Flags, Packet};
-    use crate::{ethernet::Frame, ipv4::MIN_HEADER_LEN};
+    use crate::{enet::Frame, ipv4::MIN_HEADER_LEN};
     use std::{error::Error, io::Cursor, net::Ipv4Addr};
 
     // IPv4 packet wrapped in an Ethernet frame, captured using Wireshark.

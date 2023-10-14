@@ -30,7 +30,7 @@
 #![allow(clippy::len_without_is_empty)]
 
 pub mod arp;
-pub mod ethernet;
+pub mod enet;
 pub mod ipv4;
 pub mod tcp;
 pub mod udp;

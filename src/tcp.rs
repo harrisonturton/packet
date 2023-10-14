@@ -298,7 +298,7 @@ pub(crate) const MIN_HEADER_LEN: usize = 20;
 #[cfg(test)]
 mod tests {
     use super::{Flags, Segment};
-    use crate::ethernet::Frame;
+    use crate::enet::Frame;
     use crate::ipv4;
     use std::error::Error;
     use std::result::Result;

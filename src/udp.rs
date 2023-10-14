@@ -196,7 +196,7 @@ mod offsets {
 #[cfg(test)]
 mod tests {
     use super::Datagram;
-    use crate::{ethernet::Frame, ipv4::Packet, udp::MIN_DATAGRAM_LEN};
+    use crate::{enet::Frame, ipv4::Packet, udp::MIN_DATAGRAM_LEN};
     use std::{error::Error, io::Cursor};
 
     // IPv4 packet wrapped in an Ethernet frame, captured using Wireshark.

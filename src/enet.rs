@@ -314,7 +314,7 @@ const ETHERTYPE_IPV6: u16 = 0x86DD;
 
 #[cfg(test)]
 mod tests {
-    use crate::ethernet::ETHERTYPE_ARP;
+    use crate::enet::ETHERTYPE_ARP;
 
     use super::{EtherType, Frame, LengthType, MacAddr, ETHERTYPE_IPV4, ETHERTYPE_IPV6};
     use std::error::Error;

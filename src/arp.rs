@@ -1,4 +1,4 @@
-use crate::{ethernet::EtherType, Error, Result};
+use crate::{enet::EtherType, Error, Result};
 use byteorder::{ByteOrder, NetworkEndian};
 
 /// An ARP packet.
@@ -152,7 +152,7 @@ impl From<HardwareType> for u16 {
 pub enum Operation {
     Request,
     Reply,
-    Invalid(u16)
+    Invalid(u16),
 }
 
 impl From<u16> for Operation {
@@ -180,10 +180,10 @@ pub const MIN_PACKET_LEN: usize = 28;
 
 #[cfg(test)]
 mod tests {
-    use std::result::Result;
+    use super::{HardwareType, Operation, Packet};
+    use crate::enet::{EtherType, Frame};
     use std::error::Error;
-    use crate::ethernet::{EtherType, Frame};
-    use super::{Packet, HardwareType, Operation};
+    use std::result::Result;
 
     const REPLY_PACKET: &'static [u8] = include_bytes!("../resources/enet-arp-reply.bin");
 
@@ -237,7 +237,10 @@ mod tests {
     fn packet_has_expected_sender_hardware_addr() -> Result<(), Box<dyn Error>> {
         let frame = Frame::new(REPLY_PACKET)?;
         let packet = Packet::new(frame.payload())?;
-        assert_eq!(packet.sender_hardware_addr(), &[0xBC, 0xD0, 0x74, 0x0D, 0x9C, 0x12]);
+        assert_eq!(
+            packet.sender_hardware_addr(),
+            &[0xBC, 0xD0, 0x74, 0x0D, 0x9C, 0x12]
+        );
         Ok(())
     }
 
