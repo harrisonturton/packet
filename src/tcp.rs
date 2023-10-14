@@ -4,10 +4,10 @@
 //!
 //! Follows [RFC
 //! 9293](https://www.rfc-editor.org/rfc/rfc9293.html#name-functional-specification).
-use crate::{bitset, Error, Result};
+use crate::{bitset, setbits, Error, Result};
 use byteorder::{ByteOrder, NetworkEndian};
 
-/// A TCP segment
+/// A TCP segment.
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Segment<B: AsRef<[u8]>> {
     buf: B,
@@ -99,6 +99,98 @@ impl<B: AsRef<[u8]>> Segment<B> {
     pub fn urgent(&self) -> u16 {
         let data = self.buf.as_ref();
         NetworkEndian::read_u16(&data[offsets::URGENT])
+    }
+}
+
+/// Builds [`Segment`] instances.
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+pub struct SegmentBuilder<B: AsRef<[u8]> + AsMut<[u8]>> {
+    buf: B,
+}
+
+impl<B: AsRef<[u8]> + AsMut<[u8]>> SegmentBuilder<B> {
+    /// Create a new TCP segment builder.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the buffer is smaller than the minimum TCP header size.
+    #[inline]
+    #[must_use]
+    pub fn new(buf: B) -> Result<Self> {
+        if buf.as_ref().len() >= MIN_HEADER_LEN as usize {
+            Ok(Self { buf })
+        } else {
+            Err(Error::CannotParse("buffer too small"))
+        }
+    }
+
+    /// Set the source port.
+    #[inline]
+    #[must_use]
+    pub fn source(mut self, port: u16) {
+        let data = self.buf.as_mut();
+        NetworkEndian::write_u16(&mut data[offsets::SOURCE], port);
+    }
+
+    /// Set the destination port.
+    #[inline]
+    #[must_use]
+    pub fn dest(mut self, port: u16) {
+        let data = self.buf.as_mut();
+        NetworkEndian::write_u16(&mut data[offsets::DEST], port);
+    }
+
+    /// Set the sequence number.
+    #[inline]
+    #[must_use]
+    pub fn sequence(mut self, seq: u32) {
+        let data = self.buf.as_mut();
+        NetworkEndian::write_u32(&mut data[offsets::SEQUENCE], seq);
+    }
+
+    /// Set the acknowledgment number.
+    #[inline]
+    #[must_use]
+    pub fn acked(mut self, acked: u32) {
+        let data = self.buf.as_mut();
+        NetworkEndian::write_u32(&mut data[offsets::ACKED], acked);
+    }
+
+    /// Set the data offset.
+    #[inline]
+    #[must_use]
+    pub fn data_offset(mut self, offset: u8) {
+        let data = self.buf.as_mut();
+        let current = data[offsets::DATA_OFFSET];
+        data[offsets::DATA_OFFSET] = setbits(current, offset << 4, 0b1111 << 4);
+    }
+
+    /// Set the control flags.
+    #[inline]
+    #[must_use]
+    pub fn flags(mut self, flags: Flags) {
+        unimplemented!()
+    }
+
+    /// Set the window.
+    #[inline]
+    #[must_use]
+    pub fn window(mut self, window: u16) {
+        unimplemented!()
+    }
+
+    /// Set the checksum.
+    #[inline]
+    #[must_use]
+    pub fn checksum(mut self, checksum: u16) {
+        unimplemented!()
+    }
+
+    /// Set the urgent pointer.
+    #[inline]
+    #[must_use]
+    pub fn urgent(mut self, urgent: u16) {
+        unimplemented!()
     }
 }
 
