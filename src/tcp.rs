@@ -1,5 +1,7 @@
 //! Read and write TCP segments.
 //!
+//! This module is still in development.
+//!
 //! # Standards conformance
 //!
 //! Follows [RFC
