@@ -1,4 +1,5 @@
 use std::error::Error;
+use packet::{enet, ipv4};
 
 /// parse packets
 #[derive(argh::FromArgs, Debug)]
@@ -15,7 +16,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     let bytes = std::fs::read(path)?;
 
     println!("ETHERNET FRAME");
-    let frame = packet::ethernet::Frame::new(&bytes)?;
+    let frame = enet::Frame::new(&bytes)?;
 
     println!(
         "dest: {:x?} src: {:x?} type: {:?} data: {:x?}",
@@ -27,7 +28,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     println!("IPv4 PACKET");
     let payload = frame.payload();
-    let packet = packet::ipv4::Packet::new(payload)?;
+    let packet = ipv4::Packet::new(payload)?;
     println!("{:?} {:?}", packet.source(), packet.dest());
 
     Ok(())
