@@ -155,9 +155,9 @@ impl<B: AsRef<[u8]>> Packet<B> {
     /// Extract the protocol.
     #[inline]
     #[must_use]
-    pub fn protocol(&self) -> u8 {
+    pub fn protocol(&self) -> Protocol {
         let data = self.buf.as_ref();
-        data[offsets::PROTOCOL]
+        Protocol::from(data[offsets::PROTOCOL])
     }
 
     /// Extract the header checksum.
@@ -349,9 +349,9 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
     /// Set the protocol.
     #[inline]
     #[must_use]
-    pub fn protocol(mut self, protocol: u8) -> Self {
+    pub fn protocol(mut self, protocol: Protocol) -> Self {
         let data = self.buf.as_mut();
-        data[offsets::PROTOCOL] = protocol;
+        data[offsets::PROTOCOL] = u8::from(protocol);
         self
     }
 
@@ -592,10 +592,53 @@ impl From<Flags> for u8 {
     }
 }
 
+/// IP protocol types.
+///
+/// See the [IANA list of Protocol
+/// Numbers](https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub enum Protocol {
+    Icmp,
+    Tcp,
+    Udp,
+    Unknown(u8),
+}
+
+impl From<u8> for Protocol {
+    fn from(value: u8) -> Self {
+        match value {
+            protocol::ICMP => Protocol::Icmp,
+            protocol::TCP => Protocol::Tcp,
+            protocol::UDP => Protocol::Udp,
+            _ => Protocol::Unknown(value),
+        }
+    }
+}
+
+impl From<Protocol> for u8 {
+    fn from(value: Protocol) -> Self {
+        match value {
+            Protocol::Icmp => protocol::ICMP,
+            Protocol::Tcp => protocol::TCP,
+            Protocol::Udp => protocol::UDP,
+            Protocol::Unknown(val) => val,
+        }
+    }
+}
+
+mod protocol {
+    pub(crate) const ICMP: u8 = 1;
+    pub(crate) const TCP: u8 = 6;
+    pub(crate) const UDP: u8 = 17;
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Dscp, Ecn, Flags, Packet};
-    use crate::{enet::Frame, ipv4::MIN_HEADER_LEN};
+    use crate::{
+        enet::Frame,
+        ipv4::{Protocol, MIN_HEADER_LEN},
+    };
     use std::{error::Error, io::Cursor, net::Ipv4Addr};
 
     // IPv4 packet wrapped in an Ethernet frame, captured using Wireshark.
@@ -733,7 +776,7 @@ mod tests {
     fn packet_has_expected_protocol() -> Result<(), Box<dyn Error>> {
         let frame = Frame::new(FRAME_WITH_PACKET)?;
         let packet = Packet::new(frame.payload())?;
-        assert_eq!(packet.protocol(), 17);
+        assert_eq!(packet.protocol(), Protocol::Udp);
         Ok(())
     }
 
@@ -823,8 +866,10 @@ mod tests {
     #[test]
     fn packet_builder_has_expected_protocol() -> Result<(), Box<dyn Error>> {
         let buf = &mut [0; MIN_HEADER_LEN as usize];
-        let packet = Packet::<&[u8]>::builder(buf)?.protocol(12).build();
-        assert_eq!(packet.protocol(), 12);
+        let packet = Packet::<&[u8]>::builder(buf)?
+            .protocol(Protocol::Udp)
+            .build();
+        assert_eq!(packet.protocol(), Protocol::Udp);
         Ok(())
     }
 
@@ -930,5 +975,25 @@ mod tests {
     fn flags_from_u8_has_expected_more_fragments() {
         let flags = Flags::from(0b001);
         assert_eq!(flags.more_fragments(), true);
+    }
+
+    #[test]
+    fn protocol_from_u8_has_expected_value_when_icmp() {
+        assert_eq!(Protocol::from(1), Protocol::Icmp);
+    }
+
+    #[test]
+    fn protocol_from_u8_has_expected_value_when_tcp() {
+        assert_eq!(Protocol::from(6), Protocol::Tcp);
+    }
+
+    #[test]
+    fn protocol_from_u8_has_expected_value_when_udp() {
+        assert_eq!(Protocol::from(17), Protocol::Udp);
+    }
+
+    #[test]
+    fn protocol_from_u8_has_expected_value_when_unknown() {
+        assert_eq!(Protocol::from(12), Protocol::Unknown(12));
     }
 }
