@@ -29,9 +29,6 @@ pub struct Frame<B: AsRef<[u8]>> {
 }
 
 impl<B: AsRef<[u8]>> Frame<B> {
-    /// Size of the Ethernet header.
-    pub const HEADER_LEN: usize = 14;
-
     /// Create a new Ethernet frame.
     ///
     /// # Errors
@@ -45,7 +42,7 @@ impl<B: AsRef<[u8]>> Frame<B> {
     #[inline]
     #[must_use]
     pub fn new(buf: B) -> Result<Self> {
-        if buf.as_ref().len() >= Self::HEADER_LEN {
+        if buf.as_ref().len() >= HEADER_LEN {
             Ok(Self { buf })
         } else {
             Err(Error::CannotParse("buffer too small"))
@@ -149,7 +146,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> FrameBuilder<B> {
     #[inline]
     #[must_use]
     pub fn new(buf: B) -> Result<Self> {
-        if buf.as_ref().len() >= Frame::<B>::HEADER_LEN {
+        if buf.as_ref().len() >= HEADER_LEN {
             Ok(Self { buf })
         } else {
             Err(Error::CannotParse("buffer too small"))
@@ -317,6 +314,9 @@ impl ToString for MacAddr {
         format!("{a:02x?}:{b:02x?}:{c:02x?}:{d:02x?}:{e:02x?}:{f:02x?}")
     }
 }
+
+/// Size of the Ethernet header.
+pub const HEADER_LEN: usize = 14;
 
 // When the length/type field is below this value it is considered a length.
 const MAX_LENTYPE_LEN: u16 = 0x5DC;
