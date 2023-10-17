@@ -1,5 +1,5 @@
-use std::error::Error;
 use packet::{enet, ipv4};
+use std::error::Error;
 
 /// parse packets
 #[derive(argh::FromArgs, Debug)]
