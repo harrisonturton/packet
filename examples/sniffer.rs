@@ -52,8 +52,10 @@ mod sniffer {
                 if let LengthType::Type(EtherType::Ipv4) = frame.length_type() {
                     let packet = ipv4::Packet::new(frame.payload())?;
                     println!(
-                        "[IPV4] protocol={:?} len={:?}\n",
+                        "[IPV4] protocol={:?} source={:?} dest={:?} len={:?}\n",
                         packet.protocol(),
+                        packet.source(),
+                        packet.dest(),
                         packet.len()
                     );
                 } else {
