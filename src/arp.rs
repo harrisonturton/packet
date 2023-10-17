@@ -1,3 +1,4 @@
+//! Read and write ARP packets.
 use crate::{enet::EtherType, Error, Result};
 use byteorder::{ByteOrder, NetworkEndian};
 
