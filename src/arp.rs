@@ -21,12 +21,37 @@ impl<B: AsRef<[u8]>> Packet<B> {
     #[inline]
     #[must_use]
     pub fn new(buf: B) -> Result<Self> {
-        if buf.as_ref().len() >= MIN_PACKET_LEN {
+        if buf.as_ref().len() >= HEADER_LEN {
             Ok(Self { buf })
         } else {
-            println!("BUFFERLEN: {}", buf.as_ref().len());
             Err(Error::CannotParse("buffer too small"))
         }
+    }
+
+    /// Create a new ARP packet from a byte array *without* checking that the
+    /// array is valid. It is the responsibility of the caller to make sure the
+    /// buffer is large enough for the packet.
+    ///
+    /// # Safety
+    ///
+    /// The buffer must be at least [`HEADER_LEN`](crate::arp::HEADER_LEN) bytes
+    /// long.
+    #[inline]
+    #[must_use]
+    pub unsafe fn new_unchecked(buf: B) -> Self {
+        Self { buf }
+    }
+
+    /// Create a new [`PacketBuilder`] that modifies a buffer of bytes in-place.
+    ///
+    /// # Errors
+    ///
+    /// See [`PacketBuilder::new`].
+    pub fn builder<T>(buf: T) -> Result<PacketBuilder<T>>
+    where
+        T: AsRef<[u8]> + AsMut<[u8]>,
+    {
+        PacketBuilder::new(buf)
     }
 
     /// Extract the hardware type
@@ -68,47 +93,159 @@ impl<B: AsRef<[u8]>> Packet<B> {
     #[inline]
     pub fn sender_hardware_addr(&self) -> &[u8] {
         let data = self.buf.as_ref();
-        let hardware_len = usize::from(self.hardware_addr_len());
-
-        let start = offsets::ADDRS;
-        let end = start + hardware_len;
-        &data[start..end]
+        let addr = offsets::sender_hardware_addr(data);
+        &data[addr]
     }
 
     /// Extract the senders protocol address
     #[inline]
     pub fn sender_protocol_addr(&self) -> &[u8] {
         let data = self.buf.as_ref();
-        let hardware_len = usize::from(self.hardware_addr_len());
-        let protocol_len = usize::from(self.protocol_addr_len());
-
-        let start = offsets::ADDRS + hardware_len;
-        let end = start + protocol_len;
-        &data[start..end]
+        let addr = offsets::sender_protocol_addr(data);
+        &data[addr]
     }
 
     /// Extract the targets hardware address
     #[inline]
     pub fn target_hardware_addr(&self) -> &[u8] {
         let data = self.buf.as_ref();
-        let hardware_len = usize::from(self.hardware_addr_len());
-        let protocol_len = usize::from(self.protocol_addr_len());
-
-        let start = offsets::ADDRS + hardware_len + protocol_len;
-        let end = start + hardware_len;
-        &data[start..end]
+        let addr = offsets::target_hardware_addr(data);
+        &data[addr]
     }
 
     /// Extract the targets protocol address
     #[inline]
     pub fn target_protocol_addr(&self) -> &[u8] {
         let data = self.buf.as_ref();
-        let hardware_len = usize::from(self.hardware_addr_len());
-        let protocol_len = usize::from(self.protocol_addr_len());
+        let addr = offsets::target_protocol_addr(data);
+        &data[addr]
+    }
+}
 
-        let start = offsets::ADDRS + hardware_len + protocol_len + hardware_len;
-        let end = start + protocol_len;
-        &data[start..end]
+/// Builder for constructing [`Packet`] instances.
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct PacketBuilder<B: AsRef<[u8]> + AsMut<[u8]>> {
+    buf: B,
+}
+
+impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
+    /// Create a new [`PacketBuilder`] instance from an underlying byte buffer.
+    /// This will modify the buffer in-place, so can be used for making
+    /// incremental modifications to an existing packet in memory.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the byte slice is smaller 20 bytes long, but does no other
+    /// validation.
+    #[inline]
+    #[must_use]
+    pub fn new(buf: B) -> Result<Self> {
+        if buf.as_ref().len() >= HEADER_LEN as usize {
+            Ok(PacketBuilder { buf })
+        } else {
+            Err(Error::CannotParse("buffer too small"))
+        }
+    }
+
+    /// Set the hardware type.
+    #[inline]
+    pub fn hardware_type(mut self, htype: HardwareType) -> Self {
+        let data = self.buf.as_mut();
+        NetworkEndian::write_u16(&mut data[offsets::HARDWARE_TYPE], htype.into());
+        self
+    }
+
+    /// Set the protocol type.
+    #[inline]
+    pub fn protocol_type(mut self, protocol: EtherType) -> Self {
+        let data = self.buf.as_mut();
+        NetworkEndian::write_u16(&mut data[offsets::PROTOCOL_TYPE], protocol.into());
+        self
+    }
+
+    /// Set the hardware address length.
+    #[inline]
+    pub fn hardware_addr_len(mut self, len: u8) -> Self {
+        let data = self.buf.as_mut();
+        data[offsets::HARDWARE_ADDR_LEN] = len;
+        self
+    }
+
+    /// Set the protocol address length.
+    #[inline]
+    pub fn protocol_addr_len(mut self, len: u8) -> Self {
+        let data = self.buf.as_mut();
+        data[offsets::PROTOCOL_ADDR_LEN] = len;
+        self
+    }
+
+    /// Set the operation.
+    #[inline]
+    pub fn operation(mut self, operation: Operation) -> Self {
+        let data = self.buf.as_mut();
+        NetworkEndian::write_u16(&mut data[offsets::OPERATION], operation.into());
+        self
+    }
+
+    /// Set the sender hardware address.
+    #[inline]
+    pub fn sender_hardware_addr(mut self, addr: &[u8]) -> Result<Self> {
+        let data = self.buf.as_mut();
+        let sender_addr = offsets::sender_hardware_addr(data);
+
+        if addr.len() >= sender_addr.len() {
+            return Err(Error::NotEnoughSpace("hardware address is too long"));
+        }
+
+        data[sender_addr].copy_from_slice(addr);
+        Ok(self)
+    }
+
+    /// Set the sender protocol address.
+    #[inline]
+    pub fn sender_protocol_addr(mut self, addr: &[u8]) -> Result<Self> {
+        let data = self.buf.as_mut();
+        let sender_addr = offsets::sender_protocol_addr(data);
+
+        if addr.len() >= sender_addr.len() {
+            return Err(Error::NotEnoughSpace("protocol address is too long"));
+        }
+
+        data[sender_addr].copy_from_slice(addr);
+        Ok(self)
+    }
+
+    /// Set the target hardware address.
+    #[inline]
+    pub fn target_hardware_addr(mut self, addr: &[u8]) -> Result<Self> {
+        let data = self.buf.as_mut();
+        let target_addr = offsets::target_hardware_addr(data);
+
+        if addr.len() >= target_addr.len() {
+            return Err(Error::NotEnoughSpace("protocol address is too long"));
+        }
+
+        data[target_addr].copy_from_slice(addr);
+        Ok(self)
+    }
+
+    /// Set the target protocol address.
+    #[inline]
+    pub fn target_protocol_addr(mut self, addr: &[u8]) -> Result<Self> {
+        let data = self.buf.as_mut();
+        let target_addr = offsets::target_protocol_addr(data);
+
+        if addr.len() >= target_addr.len() {
+            return Err(Error::NotEnoughSpace("protocol address is too long"));
+        }
+
+        data[target_addr].copy_from_slice(addr);
+        Ok(self)
+    }
+
+    /// Create the ARP packet.
+    pub fn build(self) -> Packet<B> {
+        unsafe { Packet::new_unchecked(self.buf) }
     }
 }
 
@@ -120,6 +257,49 @@ mod offsets {
     pub(crate) const PROTOCOL_ADDR_LEN: usize = 5;
     pub(crate) const OPERATION: Range<usize> = 6..8;
     pub(crate) const ADDRS: usize = 8;
+
+    #[inline]
+    pub(crate) fn sender_hardware_addr(data: &[u8]) -> Range<usize> {
+        let hardware_len = usize::from(data[HARDWARE_ADDR_LEN]);
+
+        let start = ADDRS;
+        let end = start + hardware_len;
+
+        start..end
+    }
+
+    #[inline]
+    pub(crate) fn sender_protocol_addr(data: &[u8]) -> Range<usize> {
+        let hardware_len = usize::from(data[HARDWARE_ADDR_LEN]);
+        let protocol_len = usize::from(data[PROTOCOL_ADDR_LEN]);
+
+        let start = ADDRS + hardware_len;
+        let end = start + protocol_len;
+
+        start..end
+    }
+
+    #[inline]
+    pub(crate) fn target_hardware_addr(data: &[u8]) -> Range<usize> {
+        let hardware_len = usize::from(data[HARDWARE_ADDR_LEN]);
+        let protocol_len = usize::from(data[PROTOCOL_ADDR_LEN]);
+
+        let start = ADDRS + hardware_len + protocol_len;
+        let end = start + hardware_len;
+
+        start..end
+    }
+
+    #[inline]
+    pub(crate) fn target_protocol_addr(data: &[u8]) -> Range<usize> {
+        let hardware_len = usize::from(data[HARDWARE_ADDR_LEN]);
+        let protocol_len = usize::from(data[PROTOCOL_ADDR_LEN]);
+
+        let start = ADDRS + hardware_len + protocol_len + hardware_len;
+        let end = start + protocol_len;
+
+        start..end
+    }
 }
 
 /// Interpretation of the "hardware type" field in the ARP packet.
@@ -176,7 +356,7 @@ impl From<Operation> for u16 {
 }
 
 // ARP packet for a 48-bit MAC address
-pub const MIN_PACKET_LEN: usize = 28;
+pub const HEADER_LEN: usize = 28;
 
 #[cfg(test)]
 mod tests {
