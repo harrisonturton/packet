@@ -29,6 +29,9 @@ pub struct Frame<B: AsRef<[u8]>> {
 }
 
 impl<B: AsRef<[u8]>> Frame<B> {
+    /// Size of the Ethernet header.
+    pub const HEADER_LEN: usize = 14;
+
     /// Create a new Ethernet frame.
     ///
     /// # Errors
@@ -42,17 +45,34 @@ impl<B: AsRef<[u8]>> Frame<B> {
     #[inline]
     #[must_use]
     pub fn new(buf: B) -> Result<Self> {
-        if buf.as_ref().len() >= MIN_FRAME_LEN {
+        if buf.as_ref().len() >= Self::HEADER_LEN {
             Ok(Self { buf })
         } else {
             Err(Error::CannotParse("buffer too small"))
         }
     }
 
-    /// Construct a new [`Frame`] using a [`FrameBuilder`].
+    /// Create a new Ethernet frame without checking the validity of the buffer
+    /// length.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the buffer is longer than
+    /// [`Frame::HEADER_LEN`] bytes long.
     #[inline]
     #[must_use]
-    pub fn builder<T>(buf: T) -> FrameBuilder<T>
+    pub unsafe fn new_unchecked(buf: B) -> Self {
+        Self { buf }
+    }
+
+    /// Construct a new [`Frame`] using a [`FrameBuilder`].
+    ///
+    /// # Errors
+    ///
+    /// See [`Frame::new`]
+    #[inline]
+    #[must_use]
+    pub fn builder<T>(buf: T) -> Result<FrameBuilder<T>>
     where
         T: AsRef<[u8]> + AsMut<[u8]>,
     {
@@ -128,8 +148,12 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> FrameBuilder<B> {
     /// Create a new [`FrameBuilder`] instance from an underlying byte slice.
     #[inline]
     #[must_use]
-    pub fn new(buf: B) -> Self {
-        Self { buf }
+    pub fn new(buf: B) -> Result<Self> {
+        if buf.as_ref().len() >= Frame::<B>::HEADER_LEN {
+            Ok(Self { buf })
+        } else {
+            Err(Error::CannotParse("buffer too small"))
+        }
     }
 
     /// Set the destination MAC address.
@@ -190,8 +214,8 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> FrameBuilder<B> {
     /// Fails when [`Frame::new`] fails.
     #[inline]
     #[must_use]
-    pub fn build(self) -> Result<Frame<B>> {
-        Frame::new(self.buf)
+    pub fn build(self) -> Frame<B> {
+        unsafe { Frame::new_unchecked(self.buf) }
     }
 }
 
@@ -294,9 +318,6 @@ impl ToString for MacAddr {
     }
 }
 
-// Ethernet MAC frame header length
-const MIN_FRAME_LEN: usize = 14;
-
 // When the length/type field is below this value it is considered a length.
 const MAX_LENTYPE_LEN: u16 = 0x5DC;
 
@@ -368,12 +389,12 @@ mod tests {
     #[test]
     fn frame_builder_returns_expected_frame() -> Result<(), Box<dyn Error>> {
         let mut buf = [0; 1024];
-        let frame = Frame::<&[u8]>::builder(&mut buf)
+        let frame = Frame::<&[u8]>::builder(&mut buf)?
             .source(MacAddr::new(0, 0, 0, 0, 0, 0))
             .dest(MacAddr::new(10, 10, 10, 10, 10, 10))
             .ethertype(EtherType::Ipv4)
             .payload(&[1, 2, 3])?
-            .build()?;
+            .build();
 
         assert_eq!(frame.source(), MacAddr::new(0, 0, 0, 0, 0, 0));
         assert_eq!(frame.dest(), MacAddr::new(10, 10, 10, 10, 10, 10));
