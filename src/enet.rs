@@ -54,8 +54,8 @@ impl<B: AsRef<[u8]>> Frame<B> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the buffer is longer than
-    /// [`Frame::HEADER_LEN`] bytes long.
+    /// The caller must ensure that the buffer is longer than [`HEADER_LEN`]
+    /// bytes long.
     #[inline]
     #[must_use]
     pub unsafe fn new_unchecked(buf: B) -> Self {
@@ -143,6 +143,10 @@ pub struct FrameBuilder<B: AsRef<[u8]> + AsMut<[u8]>> {
 
 impl<B: AsRef<[u8]> + AsMut<[u8]>> FrameBuilder<B> {
     /// Create a new [`FrameBuilder`] instance from an underlying byte slice.
+    /// 
+    /// # Errors
+    /// 
+    /// Fails when the buffer is shorter than [`HEADER_LEN`] bytes long.
     #[inline]
     #[must_use]
     pub fn new(buf: B) -> Result<Self> {

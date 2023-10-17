@@ -19,7 +19,7 @@ impl<B: AsRef<[u8]>> Packet<B> {
     #[inline]
     #[must_use]
     pub fn new(buf: B) -> Result<Self> {
-        if buf.as_ref().len() >= MIN_HEADER_LEN as usize {
+        if buf.as_ref().len() >= HEADER_LEN {
             Ok(Self { buf })
         } else {
             Err(Error::CannotParse("buffer too small"))
@@ -67,4 +67,5 @@ mod offsets {
     pub(crate) const PAYLOAD: RangeFrom<usize> = 4..;
 }
 
-pub(crate) const MIN_HEADER_LEN: usize = 4;
+/// Length of the ICMP header in bytes.
+pub const HEADER_LEN: usize = 4;

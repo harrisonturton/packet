@@ -141,7 +141,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
     #[inline]
     #[must_use]
     pub fn new(buf: B) -> Result<Self> {
-        if buf.as_ref().len() >= HEADER_LEN as usize {
+        if buf.as_ref().len() >= HEADER_LEN {
             Ok(PacketBuilder { buf })
         } else {
             Err(Error::CannotParse("buffer too small"))
@@ -150,6 +150,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
 
     /// Set the hardware type.
     #[inline]
+    #[must_use]
     pub fn hardware_type(mut self, htype: HardwareType) -> Self {
         let data = self.buf.as_mut();
         NetworkEndian::write_u16(&mut data[offsets::HARDWARE_TYPE], htype.into());
@@ -158,6 +159,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
 
     /// Set the protocol type.
     #[inline]
+    #[must_use]
     pub fn protocol_type(mut self, protocol: EtherType) -> Self {
         let data = self.buf.as_mut();
         NetworkEndian::write_u16(&mut data[offsets::PROTOCOL_TYPE], protocol.into());
@@ -166,6 +168,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
 
     /// Set the hardware address length.
     #[inline]
+    #[must_use]
     pub fn hardware_addr_len(mut self, len: u8) -> Self {
         let data = self.buf.as_mut();
         data[offsets::HARDWARE_ADDR_LEN] = len;
@@ -174,6 +177,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
 
     /// Set the protocol address length.
     #[inline]
+    #[must_use]
     pub fn protocol_addr_len(mut self, len: u8) -> Self {
         let data = self.buf.as_mut();
         data[offsets::PROTOCOL_ADDR_LEN] = len;
@@ -182,14 +186,22 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
 
     /// Set the operation.
     #[inline]
+    #[must_use]
     pub fn operation(mut self, operation: Operation) -> Self {
         let data = self.buf.as_mut();
         NetworkEndian::write_u16(&mut data[offsets::OPERATION], operation.into());
         self
     }
 
-    /// Set the sender hardware address.
+    /// Set the sender hardware address. [`PacketBuilder::hardware_addr_len`]
+    /// must be called first to set the address length.
+    /// 
+    /// # Errors
+    /// 
+    /// Fails when the caller attempts to set a hardware address that is larger
+    /// than the existing hardware address length.
     #[inline]
+    #[must_use]
     pub fn sender_hardware_addr(mut self, addr: &[u8]) -> Result<Self> {
         let data = self.buf.as_mut();
         let sender_addr = offsets::sender_hardware_addr(data);
@@ -202,8 +214,15 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
         Ok(self)
     }
 
-    /// Set the sender protocol address.
+    /// Set the sender protocol address. [`PacketBuilder::protocol_addr_len`]
+    /// must be called first to set the address length.
+    /// 
+    /// # Errors
+    /// 
+    /// Fails when the caller attempts to set a protocol address that is larger
+    /// than the existing protocol address length.
     #[inline]
+    #[must_use]
     pub fn sender_protocol_addr(mut self, addr: &[u8]) -> Result<Self> {
         let data = self.buf.as_mut();
         let sender_addr = offsets::sender_protocol_addr(data);
@@ -216,8 +235,15 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
         Ok(self)
     }
 
-    /// Set the target hardware address.
+    /// Set the target hardware address. [`PacketBuilder::hardware_addr_len`]
+    /// must be called first to set the address length.
+    /// 
+    /// # Errors
+    /// 
+    /// Fails when the caller attempts to set a hardware address that is larger
+    /// than the existing hardware address length.
     #[inline]
+    #[must_use]
     pub fn target_hardware_addr(mut self, addr: &[u8]) -> Result<Self> {
         let data = self.buf.as_mut();
         let target_addr = offsets::target_hardware_addr(data);
@@ -230,8 +256,15 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
         Ok(self)
     }
 
-    /// Set the target protocol address.
+    /// Set the target protocol address. [`PacketBuilder::protocol_addr_len`]
+    /// must be called first to set the address length.
+    /// 
+    /// # Errors
+    /// 
+    /// Fails when the caller attempts to set a protocol address that is larger
+    /// than the existing protocol address length.
     #[inline]
+    #[must_use]
     pub fn target_protocol_addr(mut self, addr: &[u8]) -> Result<Self> {
         let data = self.buf.as_mut();
         let target_addr = offsets::target_protocol_addr(data);
@@ -245,6 +278,8 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
     }
 
     /// Create the ARP packet.
+    #[inline]
+    #[must_use]
     pub fn build(self) -> Packet<B> {
         unsafe { Packet::new_unchecked(self.buf) }
     }
