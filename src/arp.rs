@@ -206,7 +206,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
         let data = self.buf.as_mut();
         let sender_addr = offsets::sender_hardware_addr(data);
 
-        if addr.len() >= sender_addr.len() {
+        if addr.len() > sender_addr.len() {
             return Err(Error::NotEnoughSpace("hardware address is too long"));
         }
 
@@ -227,7 +227,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
         let data = self.buf.as_mut();
         let sender_addr = offsets::sender_protocol_addr(data);
 
-        if addr.len() >= sender_addr.len() {
+        if addr.len() > sender_addr.len() {
             return Err(Error::NotEnoughSpace("protocol address is too long"));
         }
 
@@ -248,7 +248,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
         let data = self.buf.as_mut();
         let target_addr = offsets::target_hardware_addr(data);
 
-        if addr.len() >= target_addr.len() {
+        if addr.len() > target_addr.len() {
             return Err(Error::NotEnoughSpace("protocol address is too long"));
         }
 
@@ -269,7 +269,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
         let data = self.buf.as_mut();
         let target_addr = offsets::target_protocol_addr(data);
 
-        if addr.len() >= target_addr.len() {
+        if addr.len() > target_addr.len() {
             return Err(Error::NotEnoughSpace("protocol address is too long"));
         }
 
