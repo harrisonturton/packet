@@ -1,4 +1,3 @@
-
 #[cfg(target_os = "linux")]
 fn main() {
     sniffer::run().unwrap();
@@ -11,9 +10,12 @@ fn main() {
 
 #[cfg(target_os = "linux")]
 mod sniffer {
-    use libc::{recv, socket, AF_PACKET, ETH_P_ALL, SOCK_RAW};
     use byteorder::{ByteOrder, NetworkEndian};
-    use packet::enet;
+    use libc::{recv, socket, AF_PACKET, ETH_P_ALL, SOCK_RAW};
+    use packet::{
+        enet::{self, EtherType, LengthType},
+        ipv4,
+    };
     use std::error::Error;
 
     pub fn run() -> Result<(), Box<dyn Error>> {
@@ -40,13 +42,23 @@ mod sniffer {
 
                 let frame = enet::Frame::new(&buffer[..read as usize])?;
                 println!(
-                    "bytes={:?} source={:?} dest={:?} type={:?}\n{:x?}\n",
-                    frame.payload().len(),
+                    "[ENET] source={:?} dest={:?} len={:?} type={:?}",
                     frame.source(),
                     frame.dest(),
+                    frame.payload().len(),
                     frame.length_type(),
-                    frame.payload()
                 );
+
+                if let LengthType::Type(EtherType::Ipv4) = frame.length_type() {
+                    let packet = ipv4::Packet::new(frame.payload())?;
+                    println!(
+                        "[IPV4] protocol={:?} len={:?}\n",
+                        packet.protocol(),
+                        packet.len()
+                    );
+                } else {
+                    println!("");
+                }
             }
         }
     }
@@ -56,4 +68,4 @@ mod sniffer {
         NetworkEndian::write_u16(&mut bytes, val);
         u16::from_le_bytes(bytes)
     }
-} 
+}
