@@ -195,9 +195,9 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
 
     /// Set the sender hardware address. [`PacketBuilder::hardware_addr_len`]
     /// must be called first to set the address length.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Fails when the caller attempts to set a hardware address that is larger
     /// than the existing hardware address length.
     #[inline]
@@ -216,9 +216,9 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
 
     /// Set the sender protocol address. [`PacketBuilder::protocol_addr_len`]
     /// must be called first to set the address length.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Fails when the caller attempts to set a protocol address that is larger
     /// than the existing protocol address length.
     #[inline]
@@ -237,9 +237,9 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
 
     /// Set the target hardware address. [`PacketBuilder::hardware_addr_len`]
     /// must be called first to set the address length.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Fails when the caller attempts to set a hardware address that is larger
     /// than the existing hardware address length.
     #[inline]
@@ -258,9 +258,9 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
 
     /// Set the target protocol address. [`PacketBuilder::protocol_addr_len`]
     /// must be called first to set the address length.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Fails when the caller attempts to set a protocol address that is larger
     /// than the existing protocol address length.
     #[inline]

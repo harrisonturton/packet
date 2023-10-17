@@ -143,9 +143,9 @@ pub struct FrameBuilder<B: AsRef<[u8]> + AsMut<[u8]>> {
 
 impl<B: AsRef<[u8]> + AsMut<[u8]>> FrameBuilder<B> {
     /// Create a new [`FrameBuilder`] instance from an underlying byte slice.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Fails when the buffer is shorter than [`HEADER_LEN`] bytes long.
     #[inline]
     #[must_use]
@@ -297,6 +297,13 @@ impl MacAddr {
         Self {
             octets: [a, b, c, d, e, f],
         }
+    }
+
+    /// Get a copy of the bytes making up this address.
+    #[inline]
+    #[must_use]
+    pub fn octets(&self) -> [u8; 6] {
+        self.octets
     }
 }
 
