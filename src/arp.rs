@@ -300,7 +300,6 @@ mod offsets {
 
         let start = ADDRS;
         let end = start + hardware_len;
-
         start..end
     }
 
@@ -311,7 +310,6 @@ mod offsets {
 
         let start = ADDRS + hardware_len;
         let end = start + protocol_len;
-
         start..end
     }
 
@@ -322,7 +320,6 @@ mod offsets {
 
         let start = ADDRS + hardware_len + protocol_len;
         let end = start + hardware_len;
-
         start..end
     }
 
@@ -333,7 +330,6 @@ mod offsets {
 
         let start = ADDRS + hardware_len + protocol_len + hardware_len;
         let end = start + protocol_len;
-
         start..end
     }
 }
