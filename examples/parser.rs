@@ -1,4 +1,7 @@
-use packet::{enet, ipv4};
+use packet::{
+    enet::{self, EtherType, LengthType},
+    ipv4,
+};
 use std::error::Error;
 
 /// parse packets
@@ -21,6 +24,11 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     println!("dest = {:?}", frame.dest());
     println!("payload = {:?}", frame.payload().len());
     println!("");
+
+    if frame.length_type() != LengthType::Type(EtherType::Ipv4) {
+        println!("This example only works for IPv4 over Ethernet.");
+        return Ok(());
+    }
 
     let payload = frame.payload();
     let packet = ipv4::Packet::new(payload)?;
