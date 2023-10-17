@@ -51,6 +51,20 @@ it uses raw `AF_PACKET` sockets.
 ...
 ```
 
+### ARP packet octet printer
+
+[`examples/print-arp.rs`](examples/print-arp.rs) prints the octets that make up
+an ARP packet.
+
+```
+> cargo run --example print-arp
+ff ff ff ff ff ff ff ff ff ff
+ff ff 08 06 00 00 00 00 06 04
+00 00 ff ff ff ff ff ff 00 00
+00 00 ff ff ff ff ff ff 00 00
+00 00
+```
+
 ## Roadmap
 
 - [x] Ethernet frames
