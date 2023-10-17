@@ -40,14 +40,14 @@ on any network interface. This only works on Linux because it uses raw
 ```
 > cargo build --example sniffer
 > sudo ./target/debug/examples/sniffer
-[ENET] source=00:00:00:00:00:00 dest=00:00:00:00:00:00 len=59 type=Type(Ipv4)
-[IPV4] protocol=Tcp source=127.0.0.1 dest=127.0.0.1 len=59
+[enet] source=00:00:00:00:00:00 dest=00:00:00:00:00:00 len=59 type=Type(Ipv4)
+[ipv4] protocol=Tcp source=127.0.0.1 dest=127.0.0.1 len=59
 
-[ENET] source=00:00:00:00:00:00 dest=00:00:00:00:00:00 len=59 type=Type(Ipv4)
-[IPV4] protocol=Tcp source=127.0.0.1 dest=127.0.0.1 len=59
+[enet] source=00:00:00:00:00:00 dest=00:00:00:00:00:00 len=59 type=Type(Ipv4)
+[ipv4] protocol=Tcp source=127.0.0.1 dest=127.0.0.1 len=59
 
-[ENET] source=00:00:00:00:00:00 dest=00:00:00:00:00:00 len=84 type=Type(Ipv4)
-[IPV4] protocol=Icmp source=127.0.0.1 dest=127.0.0.1 len=84
+[enet] source=00:00:00:00:00:00 dest=00:00:00:00:00:00 len=84 type=Type(Ipv4)
+[ipv4] protocol=Icmp source=127.0.0.1 dest=127.0.0.1 len=84
 ...
 ```
 

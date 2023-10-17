@@ -42,7 +42,7 @@ mod sniffer {
 
                 let frame = enet::Frame::new(&buffer[..read as usize])?;
                 println!(
-                    "[ENET] source={:?} dest={:?} len={:?} type={:?}",
+                    "[enet] source={:?} dest={:?} len={:?} type={:?}",
                     frame.source(),
                     frame.dest(),
                     frame.payload().len(),
@@ -52,7 +52,7 @@ mod sniffer {
                 if let LengthType::Type(EtherType::Ipv4) = frame.length_type() {
                     let packet = ipv4::Packet::new(frame.payload())?;
                     println!(
-                        "[IPV4] protocol={:?} source={:?} dest={:?} len={:?}\n",
+                        "[ipv4] protocol={:?} source={:?} dest={:?} len={:?}\n",
                         packet.protocol(),
                         packet.source(),
                         packet.dest(),
