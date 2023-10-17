@@ -12,9 +12,9 @@ meaning that callers only pay for the protocol features they actually use.
 
 ### Packet parser
 
-The `examples/parser.rs` example pretty-prints a binary packet dump. It only
-works for IPv4 over Ethernet. You can create your own binary files using the
-"Export packet bytes" feature in Wireshark.
+The [`examples/parser.rs`](examples/parser.rs) example pretty-prints a binary
+packet dump. It only works for IPv4 over Ethernet. You can create your own
+binary files using the "Export packet bytes" feature in Wireshark.
 
 ```
 > cargo run --example parser -- resources/enet-ipv4.bin
@@ -33,9 +33,9 @@ payload = 52
 
 ### Packet sniffer
 
-The `examples/sniffer.rs` example logs IPv4 over Ethernet messages that arrive
-on any network interface. This only works on Linux because it uses raw
-`AF_PACKET` sockets.
+The [`examples/sniffer.rs`](examples/sniffer.rs) example logs IPv4 over Ethernet
+messages that arrive on any network interface. This only works on Linux because
+it uses raw `AF_PACKET` sockets.
 
 ```
 > cargo build --example sniffer
