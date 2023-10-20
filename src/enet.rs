@@ -214,7 +214,6 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> FrameBuilder<B> {
     ///
     /// Fails when [`Frame::new`] fails.
     #[inline]
-    #[must_use]
     pub fn build(self) -> Frame<B> {
         unsafe { Frame::new_unchecked(self.buf) }
     }

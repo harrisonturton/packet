@@ -279,7 +279,6 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
 
     /// Create the ARP packet.
     #[inline]
-    #[must_use]
     pub fn build(self) -> Packet<B> {
         unsafe { Packet::new_unchecked(self.buf) }
     }
