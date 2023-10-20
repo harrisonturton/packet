@@ -14,7 +14,7 @@ mod sniffer {
     use libc::{recv, socket, AF_PACKET, ETH_P_ALL, SOCK_RAW};
     use packet::{
         enet::{self, EtherType, LengthType},
-        ipv4,
+        ipv4, arp,
     };
     use std::error::Error;
 
@@ -49,17 +49,35 @@ mod sniffer {
                     frame.length_type(),
                 );
 
-                if let LengthType::Type(EtherType::Ipv4) = frame.length_type() {
-                    let packet = ipv4::Packet::new(frame.payload())?;
-                    println!(
-                        "[ipv4] protocol={:?} source={:?} dest={:?} len={:?}\n",
-                        packet.protocol(),
-                        packet.source(),
-                        packet.dest(),
-                        packet.len()
-                    );
-                } else {
-                    println!("");
+                if let LengthType::Type(typ) = frame.length_type() {
+                    match typ {
+                        EtherType::Ipv4 => {
+                            let packet = ipv4::Packet::new(frame.payload())?;
+                            println!(
+                                "[ipv4] protocol={:?} source={:?} dest={:?} len={:?}\n",
+                                packet.protocol(),
+                                packet.source(),
+                                packet.dest(),
+                                packet.len()
+                            );
+                        }
+                        EtherType::Arp => {
+                            let packet = arp::Packet::new(frame.payload())?;
+                            println!(
+                                "[arp] sender={:?} target={:?} sender={:?} target={:?}\n",
+                                packet.sender_hardware_addr(),
+                                packet.target_hardware_addr(),
+                                packet.sender_protocol_addr(),
+                                packet.target_protocol_addr()
+                            );
+                        }
+                        EtherType::Ipv6 => {
+                            println!("[ipv6] display not supported");
+                        },
+                        EtherType::Unknown(code) => {
+                            println!("[unknown] unknown ethertype {code}");
+                        }
+                    }
                 }
             }
         }
