@@ -24,7 +24,7 @@ impl<B: AsRef<[u8]>> Datagram<B> {
     #[inline]
     #[must_use]
     pub fn new(buf: B) -> Result<Self> {
-        if buf.as_ref().len() >= MIN_DATAGRAM_LEN {
+        if buf.as_ref().len() >= HEADER_LEN {
             Ok(Self { buf })
         } else {
             Err(Error::CannotParse("datagram too small"))
@@ -114,7 +114,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> DatagramBuilder<B> {
     #[inline]
     #[must_use]
     pub fn new(bytes: B) -> Result<Self> {
-        if bytes.as_ref().len() >= MIN_DATAGRAM_LEN {
+        if bytes.as_ref().len() >= HEADER_LEN {
             Ok(DatagramBuilder { bytes })
         } else {
             Err(Error::CannotParse("buffer too small"))
@@ -174,7 +174,6 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> DatagramBuilder<B> {
 
     /// Get the built [`Datagram`] instance.
     #[inline]
-    #[must_use]
     pub fn build(self) -> Datagram<B> {
         // Safe because of the preconditions asserted in [`DatagramBuilder::new`]
         unsafe { Datagram::new_unchecked(self.bytes) }
@@ -182,7 +181,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> DatagramBuilder<B> {
 }
 
 // Minimum length of a UDP datagram.
-pub(crate) const MIN_DATAGRAM_LEN: usize = 8;
+pub const HEADER_LEN: usize = 8;
 
 mod offsets {
     use std::ops::{Range, RangeFrom};
@@ -196,7 +195,7 @@ mod offsets {
 #[cfg(test)]
 mod tests {
     use super::Datagram;
-    use crate::{enet::Frame, ipv4::Packet, udp::MIN_DATAGRAM_LEN};
+    use crate::{enet::Frame, ipv4::Packet, udp::HEADER_LEN};
     use std::{error::Error, io::Cursor};
 
     // IPv4 packet wrapped in an Ethernet frame, captured using Wireshark.
@@ -255,7 +254,7 @@ mod tests {
 
     #[test]
     fn datagram_builder_has_expected_source() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_DATAGRAM_LEN];
+        let buf = &mut [0; HEADER_LEN];
         let datagram = Datagram::<&mut [u8]>::builder(buf)?.source(42).build();
         assert_eq!(datagram.source(), 42);
         Ok(())
@@ -263,7 +262,7 @@ mod tests {
 
     #[test]
     fn datagram_builder_has_expected_dest() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_DATAGRAM_LEN];
+        let buf = &mut [0; HEADER_LEN];
         let datagram = Datagram::<&mut [u8]>::builder(buf)?.dest(42).build();
         assert_eq!(datagram.dest(), 42);
         Ok(())
@@ -271,7 +270,7 @@ mod tests {
 
     #[test]
     fn datagram_builder_has_expected_len() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_DATAGRAM_LEN];
+        let buf = &mut [0; HEADER_LEN];
         let datagram = Datagram::<&mut [u8]>::builder(buf)?.len(12).build();
         assert_eq!(datagram.len(), 12);
         Ok(())
@@ -279,7 +278,7 @@ mod tests {
 
     #[test]
     fn datagram_builder_has_expected_checksum() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_DATAGRAM_LEN];
+        let buf = &mut [0; HEADER_LEN];
         let datagram = Datagram::<&mut [u8]>::builder(buf)?
             .checksum(0xAABB)
             .build();

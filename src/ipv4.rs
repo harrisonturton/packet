@@ -43,7 +43,7 @@ impl<B: AsRef<[u8]>> Packet<B> {
     #[inline]
     #[must_use]
     pub fn new(buf: B) -> Result<Self> {
-        if buf.as_ref().len() >= MIN_HEADER_LEN as usize {
+        if buf.as_ref().len() >= HEADER_LEN as usize {
             Ok(Self { buf })
         } else {
             Err(Error::CannotParse("buffer too small"))
@@ -198,7 +198,7 @@ impl<B: AsRef<[u8]>> Packet<B> {
     #[inline]
     #[must_use]
     pub fn has_options(&self) -> bool {
-        self.header_len() - MIN_HEADER_LEN > 0
+        self.header_len() - HEADER_LEN as u8 > 0
     }
 
     /// Extract the options. You'll have to parse them yourself.
@@ -209,8 +209,8 @@ impl<B: AsRef<[u8]>> Packet<B> {
             return None;
         }
 
-        let start = MIN_HEADER_LEN;
-        let end = start + (self.header_len() - start);
+        let start = HEADER_LEN;
+        let end = start + (self.header_len() as usize - start);
         let data = self.buf.as_ref();
         Some(&data[start as usize..end as usize])
     }
@@ -227,7 +227,7 @@ impl<B: AsRef<[u8]>> Packet<B> {
 }
 
 /// Minimum length of the header.
-pub const MIN_HEADER_LEN: u8 = 20;
+pub const HEADER_LEN: usize = 20;
 
 /// Builder for constructing [`Packet`] instances.
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -247,7 +247,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
     #[inline]
     #[must_use]
     pub fn new(buf: B) -> Result<Self> {
-        if buf.as_ref().len() >= MIN_HEADER_LEN as usize {
+        if buf.as_ref().len() >= HEADER_LEN as usize {
             Ok(PacketBuilder { buf })
         } else {
             Err(Error::CannotParse("buffer too small"))
@@ -394,7 +394,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
     #[must_use]
     pub fn payload<R: Read>(mut self, payload: R, options_len: usize) -> Result<Self> {
         let data = self.buf.as_mut();
-        let start = usize::from(MIN_HEADER_LEN) + options_len;
+        let start = usize::from(HEADER_LEN) + options_len;
         crate::write_all_bytes(payload, &mut data[start..])?;
         Ok(self)
     }
@@ -407,7 +407,6 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
     /// safe due to the bounds checking in the [`PacketBuilder::new`]
     /// constructor.
     #[inline]
-    #[must_use]
     pub fn build(self) -> Packet<B> {
         unsafe { Packet::new_unchecked(self.buf) }
     }
@@ -637,7 +636,7 @@ mod tests {
     use super::{Dscp, Ecn, Flags, Packet};
     use crate::{
         enet::Frame,
-        ipv4::{Protocol, MIN_HEADER_LEN},
+        ipv4::{Protocol, HEADER_LEN},
     };
     use std::{error::Error, io::Cursor, net::Ipv4Addr};
 
@@ -790,7 +789,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_version() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize];
+        let buf = &mut [0; HEADER_LEN as usize];
         let packet = Packet::<&[u8]>::builder(buf)?.version(12).build();
         assert_eq!(packet.version(), 12);
         Ok(())
@@ -798,7 +797,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_header_len() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize];
+        let buf = &mut [0; HEADER_LEN as usize];
         let packet = Packet::<&[u8]>::builder(buf)?.header_len(12).build();
         assert_eq!(packet.header_len(), 48);
         Ok(())
@@ -806,7 +805,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_dscp() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize];
+        let buf = &mut [0; HEADER_LEN as usize];
         let dscp = Dscp::new(5, 7)?;
         let packet = Packet::<&[u8]>::builder(buf)?.dscp(dscp).build();
         assert_eq!(packet.dscp(), dscp);
@@ -815,7 +814,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_ecn() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize];
+        let buf = &mut [0; HEADER_LEN as usize];
         let ecn = Ecn::new(true, false);
         let packet = Packet::<&[u8]>::builder(buf)?.ecn(ecn).build();
         assert_eq!(packet.ecn(), ecn);
@@ -824,7 +823,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_total_len() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize];
+        let buf = &mut [0; HEADER_LEN as usize];
         let packet = Packet::<&[u8]>::builder(buf)?.len(20).build();
         assert_eq!(packet.len(), 20);
         Ok(())
@@ -832,7 +831,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_id() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize];
+        let buf = &mut [0; HEADER_LEN as usize];
         let packet = Packet::<&[u8]>::builder(buf)?.id(20).build();
         assert_eq!(packet.id(), 20);
         Ok(())
@@ -840,7 +839,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_flags() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize];
+        let buf = &mut [0; HEADER_LEN as usize];
         let flags = Flags::new(true, false);
         let packet = Packet::<&[u8]>::builder(buf)?.flags(flags).build();
         assert_eq!(packet.flags(), flags);
@@ -849,7 +848,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_fragment_offset() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize];
+        let buf = &mut [0; HEADER_LEN as usize];
         let packet = Packet::<&[u8]>::builder(buf)?.fragment_offset(12).build();
         assert_eq!(packet.fragment_offset(), 12);
         Ok(())
@@ -857,7 +856,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_ttl() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize];
+        let buf = &mut [0; HEADER_LEN as usize];
         let packet = Packet::<&[u8]>::builder(buf)?.ttl(12).build();
         assert_eq!(packet.ttl(), 12);
         Ok(())
@@ -865,7 +864,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_protocol() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize];
+        let buf = &mut [0; HEADER_LEN as usize];
         let packet = Packet::<&[u8]>::builder(buf)?
             .protocol(Protocol::Udp)
             .build();
@@ -875,7 +874,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_checksum() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize];
+        let buf = &mut [0; HEADER_LEN as usize];
         let packet = Packet::<&[u8]>::builder(buf)?.checksum(0xB0BA).build();
         assert_eq!(packet.checksum(), 0xB0BA);
         Ok(())
@@ -883,7 +882,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_source() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize];
+        let buf = &mut [0; HEADER_LEN as usize];
         let addr = Ipv4Addr::new(127, 0, 0, 1);
         let packet = Packet::<&[u8]>::builder(buf)?.source(addr).build();
         assert_eq!(packet.source(), addr);
@@ -892,7 +891,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_dest() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize];
+        let buf = &mut [0; HEADER_LEN as usize];
         let addr = Ipv4Addr::new(127, 0, 0, 1);
         let packet = Packet::<&[u8]>::builder(buf)?.dest(addr).build();
         assert_eq!(packet.dest(), addr);
@@ -901,7 +900,7 @@ mod tests {
 
     #[test]
     fn packet_builder_has_expected_payload() -> Result<(), Box<dyn Error>> {
-        let buf = &mut [0; MIN_HEADER_LEN as usize + 4];
+        let buf = &mut [0; HEADER_LEN as usize + 4];
         let payload = [1, 2, 3, 4];
         let reader = Cursor::new(payload);
 
