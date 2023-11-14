@@ -11,9 +11,8 @@
 //! 1. [Internet protocol (RFC 791)](https://datatracker.ietf.org/doc/html/rfc791)
 //! 2. [Definition of the Differentiated Services Field (DS Field) in the IPv4 and IPv6 Headers (RFC 2474)](https://datatracker.ietf.org/doc/html/rfc2474)
 //! 3. [The Addition of Explicit Network Congestion Notification (ECN) to IP (RFC 3168)](https://datatracker.ietf.org/doc/html/rfc3168)
+use crate::{bitset, checksum::Checksum, setbits, Error, Result};
 use byteorder::{ByteOrder, NetworkEndian};
-
-use crate::{bitset, setbits, Error, Result};
 use std::{io::Read, mem::size_of, net::Ipv4Addr};
 
 /// An IPv4 packet.
@@ -43,7 +42,7 @@ impl<B: AsRef<[u8]>> Packet<B> {
     #[inline]
     #[must_use]
     pub fn new(buf: B) -> Result<Self> {
-        if buf.as_ref().len() >= HEADER_LEN as usize {
+        if buf.as_ref().len() >= HEADER_LEN {
             Ok(Self { buf })
         } else {
             Err(Error::CannotParse("buffer too small"))
@@ -197,6 +196,7 @@ impl<B: AsRef<[u8]>> Packet<B> {
     /// Whether the packet has an options field or not
     #[inline]
     #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn has_options(&self) -> bool {
         self.header_len() - HEADER_LEN as u8 > 0
     }
@@ -212,7 +212,7 @@ impl<B: AsRef<[u8]>> Packet<B> {
         let start = HEADER_LEN;
         let end = start + (self.header_len() as usize - start);
         let data = self.buf.as_ref();
-        Some(&data[start as usize..end as usize])
+        Some(&data[start..end])
     }
 
     /// Extract the payload.
@@ -247,7 +247,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
     #[inline]
     #[must_use]
     pub fn new(buf: B) -> Result<Self> {
-        if buf.as_ref().len() >= HEADER_LEN as usize {
+        if buf.as_ref().len() >= HEADER_LEN {
             Ok(PacketBuilder { buf })
         } else {
             Err(Error::CannotParse("buffer too small"))
@@ -364,13 +364,35 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
         self
     }
 
+    /// Calculate and set the checksum field. This will generate an incorrect
+    /// checksum if it isn't zero when this is calculated.
+    ///
+    /// The checksum field is the 16 bit one's complement of the one's
+    /// complement sum of all 16 bit words in the header.
+    #[inline]
+    #[must_use]
+    pub fn gen_checksum(mut self) -> Self {
+        let buf = self.buf.as_mut();
+
+        // The checksum calculation omits the checksum field
+        NetworkEndian::write_u16(&mut buf[offsets::CHECKSUM], 0);
+
+        let checksum = Checksum::new()
+            .add(buf)
+            .finish();
+
+        NetworkEndian::write_u16(&mut buf[offsets::CHECKSUM], checksum);
+        self
+    }
+
     /// Set the source.
     #[inline]
     #[must_use]
     pub fn source(mut self, source: Ipv4Addr) -> Self {
         let data = self.buf.as_mut();
         let octets = source.octets();
-        data[offsets::SOURCE].copy_from_slice(&octets);
+        // data[offsets::SOURCE].copy_from_slice(&octets);
+        NetworkEndian::write_u32(&mut data[offsets::SOURCE], u32::from_be_bytes(octets));
         self
     }
 
@@ -380,7 +402,8 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
     pub fn dest(mut self, dest: Ipv4Addr) -> Self {
         let data = self.buf.as_mut();
         let octets = dest.octets();
-        data[offsets::DEST].copy_from_slice(&octets);
+        NetworkEndian::write_u32(&mut data[offsets::DEST], u32::from_be_bytes(octets));
+        // data[offsets::DEST].copy_from_slice(&octets);
         self
     }
 
@@ -394,7 +417,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
     #[must_use]
     pub fn payload<R: Read>(mut self, payload: R, options_len: usize) -> Result<Self> {
         let data = self.buf.as_mut();
-        let start = usize::from(HEADER_LEN) + options_len;
+        let start = HEADER_LEN + options_len;
         crate::write_all_bytes(payload, &mut data[start..])?;
         Ok(self)
     }
@@ -601,6 +624,14 @@ pub enum Protocol {
     Tcp,
     Udp,
     Unknown(u8),
+}
+
+impl Protocol {
+    /// Get the IANA protocol number.
+    #[must_use]
+    pub fn code(self) -> u8 {
+        self.into()
+    }
 }
 
 impl From<u8> for Protocol {

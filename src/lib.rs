@@ -36,6 +36,8 @@ pub mod ipv4;
 pub mod tcp;
 pub mod udp;
 
+mod checksum;
+
 /// Utility wrapper for packet parsing results.
 pub type Result<T> = std::result::Result<T, Error>;
 

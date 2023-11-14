@@ -10,9 +10,8 @@
 //! stripped by the NIC anyway, so they're not usually available. It also does
 //! not support extracting the frame check sequence (FCS) because it is often
 //! innacurate or stripped due to checksum offloading on the NIC.
-use byteorder::{ByteOrder, NetworkEndian};
-
 use crate::{Error, Result};
+use byteorder::{ByteOrder, NetworkEndian};
 use std::fmt::Debug;
 
 /// An Ethernet frame.
@@ -298,6 +297,20 @@ impl MacAddr {
         }
     }
 
+    /// Create a new [`MacAddr`] instance where all segments are `0`.
+    #[inline]
+    #[must_use]
+    pub fn zero() -> Self {
+        Self::new(0, 0, 0, 0, 0, 0)
+    }
+
+    /// Create a new broadcast [`MacAddr`] instance. All segments are set to `255`.
+    #[inline]
+    #[must_use]
+    pub fn broadcast() -> Self {
+        Self::new(255, 255, 255, 255, 255, 255)
+    }
+
     /// Get a copy of the bytes making up this address.
     #[inline]
     #[must_use]
@@ -345,9 +358,8 @@ const ETHERTYPE_IPV6: u16 = 0x86DD;
 
 #[cfg(test)]
 mod tests {
-    use crate::enet::ETHERTYPE_ARP;
-
     use super::{EtherType, Frame, LengthType, MacAddr, ETHERTYPE_IPV4, ETHERTYPE_IPV6};
+    use crate::enet::ETHERTYPE_ARP;
     use std::error::Error;
 
     // IP packet wrapped in an Ethernet frame, captured using Wireshark.

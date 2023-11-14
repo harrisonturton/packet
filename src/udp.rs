@@ -3,9 +3,9 @@
 //! ## Standards conformance
 //!
 //! Follows [RFC 768](https://www.ietf.org/rfc/rfc768.txt).
-use crate::{Error, Result};
+use crate::{checksum::Checksum, ipv4::Protocol, Error, Result};
 use byteorder::{ByteOrder, NetworkEndian};
-use std::io::Read;
+use std::{io::Read, net::Ipv4Addr};
 
 /// A UDP datagram.
 ///
@@ -109,16 +109,22 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> DatagramBuilder<B> {
     ///
     /// # Errors
     ///
-    /// Fails when the byte slice is smaller 8 bytes long, but does no other
-    /// validation.
+    /// Fails when the byte slice is smaller 8 bytes long, or when the byte
+    /// slice is longer than [`u16::MAX`], but does no other validation. It
+    /// fails when the buffer is too large because the UDP datagram length field
+    /// is a `u16`.
     #[inline]
     #[must_use]
     pub fn new(bytes: B) -> Result<Self> {
-        if bytes.as_ref().len() >= HEADER_LEN {
-            Ok(DatagramBuilder { bytes })
-        } else {
-            Err(Error::CannotParse("buffer too small"))
+        if bytes.as_ref().len() >= u16::MAX.into() {
+            return Err(Error::CannotParse("UDP buffer too large"));
         }
+
+        if bytes.as_ref().len() < HEADER_LEN {
+            return Err(Error::CannotParse("buffer too small"));
+        }
+
+        Ok(DatagramBuilder { bytes })
     }
 
     /// Set the source.
@@ -154,6 +160,51 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> DatagramBuilder<B> {
     pub fn checksum(mut self, checksum: u16) -> Self {
         let data = self.bytes.as_mut();
         NetworkEndian::write_u16(&mut data[offsets::CHECKSUM], checksum);
+        self
+    }
+
+    /// Calculate and set the checksum field.
+    ///
+    /// The source and destination IPv4 addresses are included in the checksum
+    /// as part of the "pseudo-header" which spans both the IPv4 header and the
+    /// UDP header.
+    ///
+    /// See the following RFCs, each superseding the last:
+    ///
+    /// 1. [User Datagram Protocol (RFC 768)](https://www.ietf.org/rfc/rfc768.txt)
+    /// 2. [Computing the Internet Checksum (RFC 1071)](https://datatracker.ietf.org/doc/html/rfc1071).
+    /// 3. [Incremental Updating of the Internet Checksum (RFC 1141)](https://datatracker.ietf.org/doc/html/rfc1141)
+    /// 4. [Computation of the Internet Checksum via Incremental Update (RFC 1624)](https://datatracker.ietf.org/doc/html/rfc1624)
+    ///
+    /// And also see [Fast checksum computation](https://blogs.igalia.com/dpino/2018/06/14/fast-checksum-computation/).
+    ///
+    /// # Panics
+    ///
+    /// Panics when the datagram buffer is longer than [`u16::MAX`]. Datagram
+    /// packets cannot be longer than this.
+    #[inline]
+    #[must_use]
+    pub fn gen_checksum(mut self, source: Ipv4Addr, dest: Ipv4Addr) -> Self {
+        let buf = self.bytes.as_mut();
+
+        // The checksum calculation omits the checksum field
+        NetworkEndian::write_u16(&mut buf[offsets::CHECKSUM], 0);
+
+        // Truncate this on purpose. The UDP header only has space for a `u16`
+        // length field; longer buffers are an error. This precondition is
+        // enforced through the [`Datagram::new`].
+        #[allow(clippy::cast_possible_truncation)]
+        let len = buf.len() as u16;
+
+        let checksum = Checksum::new()
+            .add(buf)
+            .add(&source.octets())
+            .add(&dest.octets())
+            .add(&[Protocol::Udp.code()])
+            .add(&len.to_be_bytes())
+            .finish();
+
+        NetworkEndian::write_u16(&mut buf[offsets::CHECKSUM], checksum);
         self
     }
 
