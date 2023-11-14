@@ -13,8 +13,9 @@ mod sniffer {
     use byteorder::{ByteOrder, NetworkEndian};
     use libc::{recv, socket, AF_PACKET, ETH_P_ALL, SOCK_RAW};
     use packet::{
+        arp,
         enet::{self, EtherType, LengthType},
-        ipv4, arp,
+        ipv4,
     };
     use std::error::Error;
 
@@ -73,7 +74,7 @@ mod sniffer {
                         }
                         EtherType::Ipv6 => {
                             println!("[ipv6] display not supported");
-                        },
+                        }
                         EtherType::Unknown(code) => {
                             println!("[unknown] unknown ethertype {code}");
                         }

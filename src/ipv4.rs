@@ -11,10 +11,14 @@
 //! 1. [Internet protocol (RFC 791)](https://datatracker.ietf.org/doc/html/rfc791)
 //! 2. [Definition of the Differentiated Services Field (DS Field) in the IPv4 and IPv6 Headers (RFC 2474)](https://datatracker.ietf.org/doc/html/rfc2474)
 //! 3. [The Addition of Explicit Network Congestion Notification (ECN) to IP (RFC 3168)](https://datatracker.ietf.org/doc/html/rfc3168)
-use byteorder::{ByteOrder, NetworkEndian};
+use byteorder::{BigEndian, ByteOrder, NetworkEndian, ReadBytesExt};
 
-use crate::{bitset, setbits, Error, Result};
-use std::{io::Read, mem::size_of, net::Ipv4Addr};
+use crate::{bitset, ne_quad, setbits, Error, Result};
+use std::{
+    io::{Cursor, Read},
+    mem::size_of,
+    net::Ipv4Addr,
+};
 
 /// An IPv4 packet.
 ///
@@ -364,13 +368,43 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
         self
     }
 
+    /// Calculate and set the checksum field. This will generate an incorrect
+    /// checksum if it isn't zero when this is calculated.
+    ///
+    /// The checksum field is the 16 bit one's complement of the one's
+    /// complement sum of all 16 bit words in the header.
+    #[inline]
+    #[must_use]
+    pub fn gen_checksum(mut self) -> Self {
+        let data = self.buf.as_mut();
+
+        let checksum = {
+            let mut sum: u32 = 0;
+            let mut cursor = Cursor::new(&data);
+
+            while let Ok(value) = cursor.read_u16::<BigEndian>() {
+                sum += u32::from(value);
+            }
+
+            while 0 != sum >> 16 {
+                sum = (sum & 0xFFFF) + (sum >> 16);
+            }
+
+            !sum as u16
+        };
+
+        NetworkEndian::write_u16(&mut data[offsets::CHECKSUM], checksum);
+        self
+    }
+
     /// Set the source.
     #[inline]
     #[must_use]
     pub fn source(mut self, source: Ipv4Addr) -> Self {
         let data = self.buf.as_mut();
         let octets = source.octets();
-        data[offsets::SOURCE].copy_from_slice(&octets);
+        // data[offsets::SOURCE].copy_from_slice(&octets);
+        NetworkEndian::write_u32(&mut data[offsets::SOURCE], u32::from_be_bytes(octets));
         self
     }
 
@@ -380,7 +414,8 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
     pub fn dest(mut self, dest: Ipv4Addr) -> Self {
         let data = self.buf.as_mut();
         let octets = dest.octets();
-        data[offsets::DEST].copy_from_slice(&octets);
+        NetworkEndian::write_u32(&mut data[offsets::DEST], u32::from_be_bytes(octets));
+        // data[offsets::DEST].copy_from_slice(&octets);
         self
     }
 

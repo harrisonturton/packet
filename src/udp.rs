@@ -5,7 +5,7 @@
 //! Follows [RFC 768](https://www.ietf.org/rfc/rfc768.txt).
 use crate::{Error, Result};
 use byteorder::{ByteOrder, NetworkEndian};
-use std::io::Read;
+use std::{io::Read, net::Ipv4Addr};
 
 /// A UDP datagram.
 ///
@@ -154,6 +154,37 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> DatagramBuilder<B> {
     pub fn checksum(mut self, checksum: u16) -> Self {
         let data = self.bytes.as_mut();
         NetworkEndian::write_u16(&mut data[offsets::CHECKSUM], checksum);
+        self
+    }
+
+    /// Calculate and set the checksum field.
+    ///
+    /// The source and destination IPv4 addresses are included in the checksum
+    /// as part of the "pseudo-header" which spans both the IPv4 header and the
+    /// UDP header.
+    #[inline]
+    #[must_use]
+    pub fn gen_checksum(mut self, source: Ipv4Addr, dest: Ipv4Addr) -> Self {
+        let data = self.bytes.as_mut();
+
+        let checksum = {
+            let mut sum: u32 = 0;
+            for i in 0..data.len() - 1 {
+                sum += u16::from_be_bytes([data[i], data[i + 1]]) as u32;
+            }
+
+            let src = source.octets();
+            sum += u16::from_be_bytes([src[0], src[1]]) as u32;
+            sum += u16::from_be_bytes([src[2], src[3]]) as u32;
+
+            let dst = source.octets();
+            sum += u16::from_be_bytes([dst[0], dst[1]]) as u32;
+            sum += u16::from_be_bytes([dst[2], dst[3]]) as u32;
+
+            !sum
+        };
+
+        NetworkEndian::write_u32(&mut data[offsets::CHECKSUM], checksum);
         self
     }
 

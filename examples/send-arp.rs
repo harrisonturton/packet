@@ -1,5 +1,4 @@
-
-// The interface to send the ethernet frame to 
+// The interface to send the ethernet frame to
 pub const IFINDEX: usize = 3;
 
 pub const ETHER_ADDR_LEN: u8 = 6;
@@ -15,12 +14,15 @@ fn main() {
 }
 
 mod sender {
+    use byteorder::{ByteOrder, NetworkEndian};
+    use libc::{sendto, sockaddr_ll, socket, AF_PACKET, ETH_P_ALL, ETH_P_ARP, SOCK_RAW};
+    use packet::{
+        arp::{self, HardwareType, Operation},
+        enet::{self, EtherType, MacAddr},
+    };
     use std::{error::Error, mem::size_of, net::Ipv4Addr};
-    use byteorder::{NetworkEndian, ByteOrder};
-    use libc::{socket, AF_PACKET, ETH_P_ALL, SOCK_RAW, sockaddr_ll, ETH_P_ARP, sendto};
-    use packet::{enet::{MacAddr, self, EtherType}, arp::{self, HardwareType, Operation}};
 
-    use crate::{IFINDEX, ETHER_ADDR_LEN};
+    use crate::{ETHER_ADDR_LEN, IFINDEX};
 
     pub unsafe fn run() -> Result<(), Box<dyn Error>> {
         let sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL as u16) as i32);
@@ -41,7 +43,14 @@ mod sender {
         };
 
         let buf = frame()?;
-        let sent = sendto(sock, buf.as_ptr() as _, buf.len(), 0, &addr as *const _ as _, size_of::<sockaddr_ll>() as u32);
+        let sent = sendto(
+            sock,
+            buf.as_ptr() as _,
+            buf.len(),
+            0,
+            &addr as *const _ as _,
+            size_of::<sockaddr_ll>() as u32,
+        );
         println!("Sent {sent} of {} bytes", buf.len());
 
         Ok(())
@@ -77,7 +86,7 @@ mod sender {
             .ethertype(enet::EtherType::Arp)
             .payload(&arpbuf)?
             .build();
-        
+
         println!("enet: {:x?}", enetbuf);
 
         Ok(enetbuf)

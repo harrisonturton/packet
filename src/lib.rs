@@ -83,6 +83,15 @@ pub(crate) fn setbits(a: u8, b: u8, mask: u8) -> u8 {
     (a & !mask) | (b & mask)
 }
 
+// Convert an IPv4 address into network endian
+#[must_use]
+#[inline]
+pub(crate) fn ne_quad(val: [u8; 4]) -> [u8; 4] {
+    let mut ret = val;
+    ret.reverse();
+    ret
+}
+
 #[cfg(test)]
 mod tests {
     use super::{bitset, setbits};
