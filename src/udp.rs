@@ -218,8 +218,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> DatagramBuilder<B> {
     #[must_use]
     pub fn payload<R: Read>(mut self, payload: R) -> Result<Self> {
         let data = self.bytes.as_mut();
-        let buf = &mut data[offsets::PAYLOAD];
-        crate::write_all_bytes(payload, buf)?;
+        crate::write_all_bytes(payload, &mut data[offsets::PAYLOAD])?;
         Ok(self)
     }
 
