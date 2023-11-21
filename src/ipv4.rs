@@ -378,9 +378,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> PacketBuilder<B> {
         NetworkEndian::write_u16(&mut buf[offsets::CHECKSUM], 0);
 
         // TODO: Remove assumes that the header has no options.
-        let checksum = Checksum::new()
-            .add(&buf[0..4*5])
-            .finish();
+        let checksum = Checksum::new().add(&buf[0..4 * 5]).finish();
 
         NetworkEndian::write_u16(&mut buf[offsets::CHECKSUM], checksum);
         self
