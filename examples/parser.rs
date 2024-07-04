@@ -1,6 +1,6 @@
 use packet::{
     enet::{self, EtherType, LengthType},
-    ipv4,
+    ipv4::{self, Protocol},
 };
 use std::error::Error;
 
@@ -38,6 +38,36 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     println!("source = {:?}", packet.source());
     println!("dest = {:?}", packet.dest());
     println!("payload = {:?}", packet.payload().len());
+
+    match packet.protocol() {
+        Protocol::Tcp => {
+            let segment = packet::tcp::Segment::new(packet.payload())?;
+            println!();
+            println!("[tcp]");
+            println!("source = {:?}", segment.source());
+            println!("dest = {:?}", segment.dest());
+            println!("sequence = {:?}", segment.sequence());
+            println!("acked = {:?}", segment.acked());
+            println!("data_offset = {:?}", segment.data_offset());
+            println!("flags = {:?}", segment.flags());
+            println!("window = {:?}", segment.window());
+            println!("checksum = {:?}", segment.checksum());
+            println!("urgent = {:?}", segment.urgent());
+        },
+        Protocol::Udp => {
+            let dgram = packet::udp::Datagram::new(packet.payload())?;
+            println!();
+            println!("[udp]");
+            println!("source = {:?}", dgram.source());
+            println!("dest = {:?}", dgram.dest());
+            println!("sequence = {:?}", dgram.len());
+            println!("acked = {:?}", dgram.checksum());
+            println!("payload len = {:?}", dgram.payload().len());
+        },
+        protocol => {
+            println!("protocol = {protocol:?}");
+        }
+    }
 
     Ok(())
 }
