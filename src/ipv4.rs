@@ -197,22 +197,36 @@ impl<B: AsRef<[u8]>> Packet<B> {
     #[inline]
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
-    pub fn has_options(&self) -> bool {
-        self.header_len() - HEADER_LEN as u8 > 0
+    pub fn has_options(&self) -> Result<bool> {
+        let hdrlen = self.header_len();
+        if (hdrlen as usize) < HEADER_LEN {
+            Err(Error::CannotParse("header length overflow"))
+        } else {
+            Ok(self.header_len() - HEADER_LEN as u8 > 0)
+        }
     }
 
     /// Extract the options. You'll have to parse them yourself.
     #[inline]
     #[must_use]
-    pub fn options(&self) -> Option<&[u8]> {
-        if !self.has_options() {
-            return None;
+    pub fn options(&self) -> Result<Option<&[u8]>> {
+        if !self.has_options()? {
+            return Ok(None);
         }
 
         let start = HEADER_LEN;
         let end = start + (self.header_len() as usize - start);
+
+        if start + end > self.buf.as_ref().len() {
+            return Err(Error::CannotParse("unexpected eof when reading ipv4 header"));
+        }
+
+        if start == end {
+            return Err(Error::CannotParse("unexpected eof when reading ipv4 header"));
+        }
+
         let data = self.buf.as_ref();
-        Some(&data[start..end])
+        Ok(Some(&data[start..end]))
     }
 
     /// Extract the payload.
@@ -767,7 +781,7 @@ mod tests {
     fn packet_has_expected_options_when_no_options() -> Result<(), Box<dyn Error>> {
         let frame = Frame::new(FRAME_WITH_PACKET)?;
         let packet = Packet::new(frame.payload())?;
-        assert_eq!(packet.options(), None);
+        assert_eq!(packet.options()?, None);
         Ok(())
     }
 
@@ -775,21 +789,29 @@ mod tests {
     fn packet_has_expected_has_options_when_no_options() -> Result<(), Box<dyn Error>> {
         let frame = Frame::new(FRAME_WITH_PACKET)?;
         let packet = Packet::new(frame.payload())?;
-        assert_eq!(packet.has_options(), false);
+        assert_eq!(packet.has_options()?, false);
         Ok(())
     }
 
     #[test]
     fn packet_has_expected_options_when_options_exist() -> Result<(), Box<dyn Error>> {
         let packet = Packet::new(PACKET_WITH_OPTS)?;
-        assert_eq!(packet.options(), Some([1, 10, 0, 0].as_slice()));
+        assert_eq!(packet.options()?, Some([1, 10, 0, 0].as_slice()));
+        Ok(())
+    }
+
+    #[test]
+    fn packet_has_expected_options_when_header_len_points_past_buffer() -> Result<(), Box<dyn Error>> {
+        let bytes = vec![0xc9, 0x2d, 0xa1, 0x66, 0x86, 0xff, 0xc2, 0x11, 0xa, 0x2c, 0x1d, 0x39, 0x56, 0xc, 0xac, 0x63, 0x51, 0x28, 0xb, 0x72, 0xb9, 0x8a, 0xfe, 0xe, 0xbf];
+        let packet = Packet::new(bytes)?;
+        assert!(packet.options().is_err());
         Ok(())
     }
 
     #[test]
     fn packet_has_expected_has_options_when_options_exist() -> Result<(), Box<dyn Error>> {
         let packet = Packet::new(PACKET_WITH_OPTS)?;
-        assert_eq!(packet.has_options(), true);
+        assert_eq!(packet.has_options()?, true);
         Ok(())
     }
 
