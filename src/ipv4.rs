@@ -218,11 +218,15 @@ impl<B: AsRef<[u8]>> Packet<B> {
         let end = start + (self.header_len() as usize - start);
 
         if start + end > self.buf.as_ref().len() {
-            return Err(Error::CannotParse("unexpected eof when reading ipv4 header"));
+            return Err(Error::CannotParse(
+                "unexpected eof when reading ipv4 header",
+            ));
         }
 
         if start == end {
-            return Err(Error::CannotParse("unexpected eof when reading ipv4 header"));
+            return Err(Error::CannotParse(
+                "unexpected eof when reading ipv4 header",
+            ));
         }
 
         let data = self.buf.as_ref();
@@ -801,8 +805,12 @@ mod tests {
     }
 
     #[test]
-    fn packet_has_expected_options_when_header_len_points_past_buffer() -> Result<(), Box<dyn Error>> {
-        let bytes = vec![0xc9, 0x2d, 0xa1, 0x66, 0x86, 0xff, 0xc2, 0x11, 0xa, 0x2c, 0x1d, 0x39, 0x56, 0xc, 0xac, 0x63, 0x51, 0x28, 0xb, 0x72, 0xb9, 0x8a, 0xfe, 0xe, 0xbf];
+    fn packet_has_expected_options_when_header_len_points_past_buffer() -> Result<(), Box<dyn Error>>
+    {
+        let bytes = vec![
+            0xc9, 0x2d, 0xa1, 0x66, 0x86, 0xff, 0xc2, 0x11, 0xa, 0x2c, 0x1d, 0x39, 0x56, 0xc, 0xac,
+            0x63, 0x51, 0x28, 0xb, 0x72, 0xb9, 0x8a, 0xfe, 0xe, 0xbf,
+        ];
         let packet = Packet::new(bytes)?;
         assert!(packet.options().is_err());
         Ok(())

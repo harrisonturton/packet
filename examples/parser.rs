@@ -53,7 +53,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
             println!("window = {:?}", segment.window());
             println!("checksum = {:?}", segment.checksum());
             println!("urgent = {:?}", segment.urgent());
-        },
+        }
         Protocol::Udp => {
             let dgram = packet::udp::Datagram::new(packet.payload())?;
             println!();
@@ -63,7 +63,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
             println!("sequence = {:?}", dgram.len());
             println!("acked = {:?}", dgram.checksum());
             println!("payload len = {:?}", dgram.payload().len());
-        },
+        }
         protocol => {
             println!("protocol = {protocol:?}");
         }
